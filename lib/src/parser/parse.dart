@@ -281,9 +281,9 @@ class Parser {
           XmlElement? element;
           try {
             element = node.findElements(elementName).single;
-          } on StateError catch (_) {
-            // Either there is no element, or there are too many ones.
-            // Silently ignore this element.
+          } on StateError {
+            // Either there is no element or there are too many ones.
+            // Continue with empty border silently
           }
 
           final borderStyleAttribute = element?.getAttribute('style')?.trim();
@@ -557,6 +557,10 @@ class Parser {
       _parseRow(child, sheetObject, name);
     });
 
+    _findDrawings(worksheet).forEach((child) {
+      _parseDrawing(child, sheetObject, name);
+    });
+
     _parseHeaderFooter(worksheet, sheetObject);
     _parseColWidthsRowHeights(worksheet, sheetObject);
 
@@ -568,7 +572,7 @@ class Parser {
     _normalizeTable(sheetObject);
   }
 
-  _parseRow(XmlElement node, Sheet sheetObject, String name) {
+  void _parseRow(XmlElement node, Sheet sheetObject, String name) {
     var rowIndex = (_getRowNumber(node) ?? -1) - 1;
     if (rowIndex < 0) {
       return;
@@ -578,6 +582,14 @@ class Parser {
       _parseCell(child, sheetObject, rowIndex, name);
     });
   }
+
+   void _parseDrawing(XmlElement node, Sheet sheetObject, String name) {
+    if (node.name.local == 'drawing') {
+      final rId = node.getAttribute('r:id');
+      if (rId != null) {
+        _parseImageCell(node, sheetObject, rId, name);
+      }
+    }
 
   void _parseCell(
       XmlElement node, Sheet sheetObject, int rowIndex, String name) {
@@ -888,4 +900,9 @@ class Parser {
       });
     }
   }
+  void _parseImageCell(XmlElement node, Sheet sheet, String rId, String name) {
+    _ImageCellParser(_excel).parseImageCell(node, sheet, rId, name);
+  }
+}
+}
 }

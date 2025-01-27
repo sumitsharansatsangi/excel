@@ -41,6 +41,11 @@ class Save {
     return cell;
   } */
 
+ XmlElement _createImageCell(
+      String sheet, int columnIndex, int rowIndex, ImageCellValue image) {
+    return _ImageCellCreator(_excel, _archiveFiles)
+        .createImageCell(sheet, columnIndex, rowIndex, image);
+  }
   // Manage value's type
   XmlElement _createCell(String sheet, int columnIndex, int rowIndex,
       CellValue? value, NumFormat? numberFormat) {
