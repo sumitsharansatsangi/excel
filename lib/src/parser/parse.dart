@@ -189,6 +189,7 @@ class Parser {
       }
     }
   }
+
   /// Parses and processes merged cells within the spreadsheet.
   ///
   /// This method identifies merged cell regions in each sheet of the spreadsheet
@@ -306,7 +307,7 @@ class Parser {
         for (var elementName in borderElementNamesList) {
           XmlElement? element;
           try {
-            element = node.findElements(elementName).single;
+            element = node.findElements(elementName).singleOrNull;
           } on StateError {
             // Either there is no element or there are too many ones.
             // Continue with empty border silently
@@ -319,7 +320,8 @@ class Parser {
 
           String? borderColorHex;
           try {
-            final color = element?.findElements('color').single;
+            var el = element?.findElements('color');
+            var color = el != null && el.isNotEmpty ? el.single : null;
             borderColorHex = color?.getAttribute('rgb')?.trim();
           } on StateError catch (_) {}
 
@@ -702,7 +704,8 @@ class Parser {
       cellStyle: _excel._cellStyleList[s],
     );
   }
- /// Returns the comments for each sheet in the workbook.
+
+  /// Returns the comments for each sheet in the workbook.
   ///
   /// Extracted from the comments sheet from the workbook.
   Map<String, Map<String, String>> _parseComments(Archive archive) {
