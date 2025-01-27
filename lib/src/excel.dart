@@ -79,7 +79,7 @@ class Excel {
   }
 
   factory Excel.decodeBuffer(InputStream input) {
-    return _newExcel(ZipDecoder().decodeBuffer(input));
+    return _newExcel(ZipDecoder().decodeStream(input));
   }
 
   ///
@@ -516,7 +516,22 @@ class Excel {
       _sheetMap[sheet] = Sheet._(this, sheet);
     }
   }
+/// Returns a map of sheet names and their visibility status.
+  Map<String, String> getSheetVisibility() {
+    Map<String, String> sheetVisibility = {};
 
+    Iterable<XmlElement>? elements =
+        _xmlFiles['xl/workbook.xml']?.findAllElements('sheet');
+    if (elements != null) {
+      for (var element in elements) {
+        String name = element.getAttribute('name') ?? 'Unknown';
+        String state = element.getAttribute('state') ?? 'visible';
+        sheetVisibility[name] = state;
+      }
+    }
+
+    return sheetVisibility;
+  }
   ///
   ///Updates the contents of `sheet` of the `cellIndex: CellIndex.indexByColumnRow(0, 0);` where indexing starts from 0
   ///
