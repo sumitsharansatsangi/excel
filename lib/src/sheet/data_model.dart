@@ -96,9 +96,9 @@ class Data extends Equatable {
   }
 
   /// sets the user defined CellStyle in this current cell
-  set cellStyle(CellStyle? _) {
+  set cellStyle(CellStyle? c) {
     _sheet._excel._styleChanges = true;
-    _cellStyle = _;
+    _cellStyle = c;
   }
 
   /// returns the comment stored in this cell;
