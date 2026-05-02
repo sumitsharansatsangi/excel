@@ -27,10 +27,6 @@
 
 ### [Excel](https://www.pub.dev/packages/excel) is a flutter and dart library for reading, creating and updating excel-sheets for XLSX files.
 
-### Your Donations will help alot, Thank you!! ❤️❤️
-- [Ko-fi](http://ko-fi.com/kawal)
-- [PayPal](https://paypal.me/justkawal)
-
 ## Road-map:
  - ➕ Formulas and Calculations
  - 💾 Support Multiple Data type efficiently
@@ -39,7 +35,9 @@
  - 📰 Create Tables and style
  - 🔐 Encrypt and Decrypt excel on the go.
  - Many more **features**
+## Breaking changes from 4.x.x to 5.x.x
 
+- Updated minimum Dart SDK to 3.6.0
 
 ## Breaking changes from 3.x.x to 4.x.x
 

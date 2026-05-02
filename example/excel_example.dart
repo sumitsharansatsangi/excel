@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:excel/excel.dart';
 
-Future<void> main(List<String> args)async {
+Future<void> main(List<String> args) async {
   //var file = "/Users/kawal/Desktop/excel/test/test_resources/example.xlsx";
   //var bytes = File(file).readAsBytesSync();
   var excel = Excel.createExcel();
@@ -29,12 +29,14 @@ Future<void> main(List<String> args)async {
   var sheet1rtl = excel['Sheet1'].isRTL;
   excel['Sheet1'].isRTL = false;
   print(
-      'Sheet1: ((previous) isRTL: $sheet1rtl) ---> ((current) isRTL: ${excel['Sheet1'].isRTL})');
+    'Sheet1: ((previous) isRTL: $sheet1rtl) ---> ((current) isRTL: ${excel['Sheet1'].isRTL})',
+  );
 
   var sheet2rtl = excel['Sheet2'].isRTL;
   excel['Sheet2'].isRTL = true;
   print(
-      'Sheet2: ((previous) isRTL: $sheet2rtl) ---> ((current) isRTL: ${excel['Sheet2'].isRTL})');
+    'Sheet2: ((previous) isRTL: $sheet2rtl) ---> ((current) isRTL: ${excel['Sheet2'].isRTL})',
+  );
 
   ///
   ///
@@ -60,19 +62,21 @@ Future<void> main(List<String> args)async {
   cell2.cellStyle = cellStyle;
 
   /// printing cell-type
-  print("CellType: " +
-      switch (cell.value) {
-        null => 'empty',
-        TextCellValue() => 'text',
-        FormulaCellValue() => 'Formula',
-        IntCellValue() => 'int',
-        DoubleCellValue() => 'double',
-        DateCellValue() => 'date',
-        DateTimeCellValue() => 'date+time',
-        TimeCellValue() => 'time',
-        BoolCellValue() => 'bool',
-        ImageCellValue() => 'image',
-      });
+  print(
+    "CellType: " +
+        switch (cell.value) {
+          null => 'empty',
+          TextCellValue() => 'text',
+          FormulaCellValue() => 'Formula',
+          IntCellValue() => 'int',
+          DoubleCellValue() => 'double',
+          DateCellValue() => 'date',
+          DateTimeCellValue() => 'date+time',
+          TimeCellValue() => 'time',
+          BoolCellValue() => 'bool',
+          ImageCellValue() => 'image',
+        },
+  );
 
   ///
   ///
@@ -96,8 +100,9 @@ Future<void> main(List<String> args)async {
   excel.copy('Sheet1', 'newlyCopied');
 
   var sheet2 = excel['newlyCopied'];
-  sheet2.cell(CellIndex.indexByString('A1')).value =
-      TextCellValue('Newly Copied Sheet');
+  sheet2.cell(CellIndex.indexByString('A1')).value = TextCellValue(
+    'Newly Copied Sheet',
+  );
 
   /// renaming the sheet
   excel.rename('oldSheetName', 'newSheetName');
@@ -149,15 +154,16 @@ Future<void> main(List<String> args)async {
   int columnIndex = 0;
 
   columnIterables.forEach((columnValue) {
-    columnIterableSheet.cell(CellIndex.indexByColumnRow(
-      rowIndex: columnIterableSheet.maxRows,
-      columnIndex: columnIndex,
-    ))
-      ..value = TextCellValue(columnValue);
+    columnIterableSheet.cell(
+      CellIndex.indexByColumnRow(
+        rowIndex: columnIterableSheet.maxRows,
+        columnIndex: columnIndex,
+      ),
+    )..value = TextCellValue(columnValue);
   });
 
   // Saving the file
-// Demonstrate image cell value usage
+  // Demonstrate image cell value usage
   var imageSheet = excel['Images'];
 
   // Add an image from file

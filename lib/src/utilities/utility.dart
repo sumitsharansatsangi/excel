@@ -235,3 +235,29 @@ int getColumnIndex(String columnAlphabet) {
 int _fontStyleIndex(List<_FontStyle> list, _FontStyle fontStyle) {
   return list.indexOf(fontStyle);
 }
+
+
+enum ImageFormat { png, jpeg, gif, unknown }
+
+ImageFormat detectFormat(Uint8List bytes) {
+  if (bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47) {
+    return ImageFormat.png;
+  }
+
+  if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
+    return ImageFormat.jpeg;
+  }
+
+  if (bytes.length >= 6 &&
+      bytes[0] == 0x47 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46) {
+    return ImageFormat.gif;
+  }
+
+  return ImageFormat.unknown;
+}

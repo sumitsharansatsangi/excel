@@ -14,14 +14,14 @@ class Data extends Equatable {
   ///It will clone the object by changing the `this` reference of previous DataObject and putting `new this` reference, with copying the values too
   ///
   Data._clone(Sheet sheet, Data dataObject)
-      : this._(
-          sheet,
-          dataObject._rowIndex,
-          dataObject.columnIndex,
-          value: dataObject._value,
-          comment: dataObject._comment,
-          cellStyleVal: dataObject._cellStyle,
-        );
+    : this._(
+        sheet,
+        dataObject._rowIndex,
+        dataObject.columnIndex,
+        value: dataObject._value,
+        comment: dataObject._comment,
+        cellStyleVal: dataObject._cellStyle,
+      );
 
   ///
   ///Initializes the new `Data Object`
@@ -35,13 +35,13 @@ class Data extends Equatable {
     CellStyle? cellStyleVal,
     bool isFormulaVal = false,
     String? comment,
-  })  : _sheet = sheet,
-        _value = value,
-        _cellStyle = cellStyleVal,
-        _sheetName = sheet.sheetName,
-        _rowIndex = row,
-        _columnIndex = column,
-        _comment = comment;
+  }) : _sheet = sheet,
+       _value = value,
+       _cellStyle = cellStyleVal,
+       _sheetName = sheet.sheetName,
+       _rowIndex = row,
+       _columnIndex = column,
+       _comment = comment;
 
   /// returns the newData object when called from Sheet Class
   static Data newData(Sheet sheet, int row, int column) {
@@ -66,7 +66,9 @@ class Data extends Equatable {
   /// returns the string based cellId as A1, A2 or Z5
   CellIndex get cellIndex {
     return CellIndex.indexByColumnRow(
-        columnIndex: _columnIndex, rowIndex: _rowIndex);
+      columnIndex: _columnIndex,
+      rowIndex: _rowIndex,
+    );
   }
 
   /// Helps to set the formula
@@ -107,13 +109,13 @@ class Data extends Equatable {
   String? get comment => _comment;
   @override
   List<Object?> get props => [
-        _value,
-        _columnIndex,
-        _rowIndex,
-        _cellStyle,
-        _sheetName,
-        _comment,
-      ];
+    _value,
+    _columnIndex,
+    _rowIndex,
+    _cellStyle,
+    _sheetName,
+    _comment,
+  ];
 }
 
 sealed class CellValue {
@@ -186,13 +188,13 @@ class DateCellValue extends CellValue {
     required this.year,
     required this.month,
     required this.day,
-  })  : assert(month <= 12 && month >= 1),
-        assert(day <= 31 && day >= 1);
+  }) : assert(month <= 12 && month >= 1),
+       assert(day <= 31 && day >= 1);
 
   DateCellValue.fromDateTime(DateTime dt)
-      : year = dt.year,
-        month = dt.month,
-        day = dt.day;
+    : year = dt.year,
+      month = dt.month,
+      day = dt.day;
 
   DateTime asDateTimeLocal() {
     return DateTime(year, month, day);
@@ -271,16 +273,17 @@ class TimeCellValue extends CellValue {
     this.second = 0,
     this.millisecond = 0,
     this.microsecond = 0,
-  })  : assert(hour >= 0),
-        assert(minute <= 60 && minute >= 0),
-        assert(second <= 60 && second >= 0),
-        assert(millisecond <= 1000 && millisecond >= 0),
-        assert(microsecond <= 1000 && microsecond >= 0);
+  }) : assert(hour >= 0),
+       assert(minute <= 60 && minute >= 0),
+       assert(second <= 60 && second >= 0),
+       assert(millisecond <= 1000 && millisecond >= 0),
+       assert(microsecond <= 1000 && microsecond >= 0);
 
   /// [fractionOfDay]=1.0 is 24 hours, 0.5 is 12 hours and so on.
   factory TimeCellValue.fromFractionOfDay(num fractionOfDay) {
-    var duration =
-        Duration(milliseconds: (fractionOfDay * 24 * 3600 * 1000).round());
+    var duration = Duration(
+      milliseconds: (fractionOfDay * 24 * 3600 * 1000).round(),
+    );
     return TimeCellValue.fromDuration(duration);
   }
 
@@ -296,11 +299,11 @@ class TimeCellValue extends CellValue {
   }
 
   TimeCellValue.fromTimeOfDateTime(DateTime dt)
-      : hour = dt.hour,
-        minute = dt.minute,
-        second = dt.second,
-        millisecond = dt.millisecond,
-        microsecond = dt.microsecond;
+    : hour = dt.hour,
+      minute = dt.minute,
+      second = dt.second,
+      millisecond = dt.millisecond,
+      microsecond = dt.microsecond;
 
   Duration asDuration() {
     return Duration(
@@ -318,14 +321,8 @@ class TimeCellValue extends CellValue {
   }
 
   @override
-  int get hashCode => Object.hash(
-        runtimeType,
-        hour,
-        minute,
-        second,
-        millisecond,
-        microsecond,
-      );
+  int get hashCode =>
+      Object.hash(runtimeType, hour, minute, second, millisecond, microsecond);
 
   @override
   operator ==(Object other) {
@@ -359,32 +356,48 @@ class DateTimeCellValue extends CellValue {
     this.second = 0,
     this.millisecond = 0,
     this.microsecond = 0,
-  })  : assert(month <= 12 && month >= 1),
-        assert(day <= 31 && day >= 1),
-        assert(hour <= 24 && hour >= 0),
-        assert(minute <= 60 && minute >= 0),
-        assert(second <= 60 && second >= 0),
-        assert(millisecond <= 1000 && millisecond >= 0),
-        assert(microsecond <= 1000 && microsecond >= 0);
+  }) : assert(month <= 12 && month >= 1),
+       assert(day <= 31 && day >= 1),
+       assert(hour <= 24 && hour >= 0),
+       assert(minute <= 60 && minute >= 0),
+       assert(second <= 60 && second >= 0),
+       assert(millisecond <= 1000 && millisecond >= 0),
+       assert(microsecond <= 1000 && microsecond >= 0);
 
   DateTimeCellValue.fromDateTime(DateTime date)
-      : year = date.year,
-        month = date.month,
-        day = date.day,
-        hour = date.hour,
-        minute = date.minute,
-        second = date.second,
-        millisecond = date.millisecond,
-        microsecond = date.microsecond;
+    : year = date.year,
+      month = date.month,
+      day = date.day,
+      hour = date.hour,
+      minute = date.minute,
+      second = date.second,
+      millisecond = date.millisecond,
+      microsecond = date.microsecond;
 
   DateTime asDateTimeLocal() {
     return DateTime(
-        year, month, day, hour, minute, second, millisecond, microsecond);
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      millisecond,
+      microsecond,
+    );
   }
 
   DateTime asDateTimeUtc() {
     return DateTime.utc(
-        year, month, day, hour, minute, second, millisecond, microsecond);
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      millisecond,
+      microsecond,
+    );
   }
 
   @override
@@ -394,16 +407,16 @@ class DateTimeCellValue extends CellValue {
 
   @override
   int get hashCode => Object.hash(
-        runtimeType,
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        millisecond,
-        microsecond,
-      );
+    runtimeType,
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+    millisecond,
+    microsecond,
+  );
 
   @override
   operator ==(Object other) {
@@ -421,49 +434,116 @@ class DateTimeCellValue extends CellValue {
 
 /// Represents an image in an Excel cell
 class ImageCellValue extends CellValue {
-  /// The raw bytes of the image
-  final List<int> bytes;
+  /// The raw encoded image bytes (PNG/JPEG/etc)
+  final Uint8List bytes;
 
-  /// The image format (e.g. 'png', 'jpeg')
-  final String format;
+  /// Encoded image format, such as png, jpg, jpeg, or gif.
+  final String? format;
 
-  /// Optional width in pixels
-  final int? width;
+  /// Intrinsic width in pixels
+  final int width;
 
-  /// Optional height in pixels
-  final int? height;
+  /// Intrinsic height in pixels
+  final int height;
 
-  const ImageCellValue({
-    required this.bytes,
-    required this.format,
-    this.width,
-    this.height,
-  });
+  factory ImageCellValue({
+    required Uint8List bytes,
+    String? format,
+    int? width,
+    int? height,
+  }) {
+    if (bytes.isEmpty) {
+      throw ArgumentError('Image bytes cannot be empty');
+    }
 
-  /// Create from a file path
-  static Future<ImageCellValue> fromFile(String path,
-      {int? width, int? height}) async {
-    final file = File(path);
-    final bytes = await file.readAsBytes();
-    final format = path.split('.').last.toLowerCase();
-    return ImageCellValue(
+    final dimensions = width == null || height == null
+        ? _decodeDimensions(bytes)
+        : (width, height);
+
+    return ImageCellValue._(
       bytes: bytes,
       format: format,
-      width: width,
-      height: height,
+      width: width ?? dimensions.$1,
+      height: height ?? dimensions.$2,
     );
+  }
+
+  const ImageCellValue._({
+    required this.bytes,
+    required this.format,
+    required this.width,
+    required this.height,
+  });
+
+  /// Create from raw bytes
+  static Future<ImageCellValue> fromBytes(
+    Uint8List bytes, {
+    String? format,
+    int? width,
+    int? height,
+  }) async {
+    if (bytes.isEmpty) {
+      throw ArgumentError('Image bytes cannot be empty');
+    }
+
+    final dimensions = width == null || height == null
+        ? _decodeDimensions(bytes)
+        : (width, height);
+
+    return ImageCellValue._(
+      bytes: bytes,
+      format: format,
+      width: width ?? dimensions.$1,
+      height: height ?? dimensions.$2,
+    );
+  }
+
+  /// Create from a file path
+  static Future<ImageCellValue> fromFile(
+    String path, {
+    String? format,
+    int? width,
+    int? height,
+  }) async {
+    final file = File(path);
+
+    if (!await file.exists()) {
+      throw ArgumentError('File does not exist: $path');
+    }
+
+    final bytes = await file.readAsBytes();
+    return fromBytes(bytes, format: format, width: width, height: height);
+  }
+
+  static (int width, int height) _decodeDimensions(Uint8List bytes) {
+    if (bytes.isEmpty) {
+      throw ArgumentError('Image bytes cannot be empty');
+    }
+
+    final image = img.decodeImage(bytes);
+    if (image == null) {
+      throw ArgumentError('Unsupported or invalid image format');
+    }
+
+    return (image.width, image.height);
   }
 
   @override
   String toString() {
-    return '[Image: $format ${width ?? 'auto'}x${height ?? 'auto'}]';
+    return 'ImageCellValue(${width}x$height)';
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, bytes, format, width, height);
+  int get hashCode => Object.hash(
+    runtimeType,
+    const ListEquality().hash(bytes),
+    format,
+    width,
+    height,
+  );
 
   @override
-  operator ==(Object other) {
+  bool operator ==(Object other) {
     return other is ImageCellValue &&
         const ListEquality().equals(other.bytes, bytes) &&
         other.format == format &&

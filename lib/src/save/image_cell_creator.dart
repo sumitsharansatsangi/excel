@@ -6,8 +6,7 @@ class _ImageCellCreator {
 
   _ImageCellCreator(this._excel, this._archiveFiles);
 
-  /// The number of EMUs (English Metric Units) per pixel
-  /// Used for converting image dimensions to Excel's internal units
+  /// The number of EMUs (English Metric Units) per pixel.
   static const int _emusPerPixel = 9525;
 
   XmlElement createImageCell(
@@ -32,7 +31,12 @@ class _ImageCellCreator {
     _addImageFile(image, rId);
     _updateDrawingXml(drawingPath, columnIndex, rowIndex, image, rId);
     _updateRelationships(
-        sheetRelsPath, drawingRelsPath, drawingInfo.drawingNumber, rId, image);
+      sheetRelsPath,
+      drawingRelsPath,
+      drawingInfo.drawingNumber,
+      rId,
+      image,
+    );
 
     return _createCellElement(columnIndex, rowIndex);
   }
@@ -42,21 +46,36 @@ class _ImageCellCreator {
       throw ArgumentError('Column and row indices must be non-negative');
     }
 
-    if (!['png', 'jpg', 'jpeg', 'gif'].contains(image.format.toLowerCase())) {
-      throw ArgumentError(
-          'Unsupported image format: ${image.format}. Supported formats are: png, jpg, jpeg, gif');
-    }
-
     if (image.bytes.isEmpty) {
       throw ArgumentError('Image bytes cannot be empty');
+    }
+
+    final bytes = image.bytes;
+
+    bool isPng =
+        bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47;
+
+    bool isJpeg = bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8;
+
+    bool isGif =
+        bytes.length >= 6 &&
+        bytes[0] == 0x47 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46;
+
+    if (!(isPng || isJpeg || isGif)) {
+      throw ArgumentError(
+        'Unsupported or invalid image format. Supported formats: PNG, JPEG, GIF',
+      );
     }
   }
 
   ({XmlElement? existingDrawing, String drawingRId, int drawingNumber})
-      _setupDrawing(
-    XmlDocument worksheet,
-    int rId,
-  ) {
+  _setupDrawing(XmlDocument worksheet, int rId) {
     final existingDrawing = worksheet.findAllElements('drawing').firstOrNull;
     final drawingRId = existingDrawing?.getAttribute('r:id') ?? 'rId$rId';
     final drawingNumber = existingDrawing != null
@@ -66,15 +85,36 @@ class _ImageCellCreator {
     return (
       existingDrawing: existingDrawing,
       drawingRId: drawingRId,
-      drawingNumber: drawingNumber
+      drawingNumber: drawingNumber,
     );
   }
 
   void _addImageFile(ImageCellValue image, int rId) {
-    final imageFileName = 'image$rId.${image.format.toLowerCase()}';
+    if (image.bytes.isEmpty) {
+      throw ArgumentError('Image bytes cannot be empty');
+    }
+
+    final format = detectFormat(image.bytes);
+
+    if (format == ImageFormat.unknown) {
+      throw ArgumentError('Unsupported image format');
+    }
+
+    final extension = switch (format) {
+      ImageFormat.png => 'png',
+      ImageFormat.jpeg => 'jpg',
+      ImageFormat.gif => 'gif',
+      ImageFormat.unknown => throw ArgumentError('Unsupported image format'),
+    };
+
+    final imageFileName = 'image$rId.$extension';
     final imagePath = 'xl/media/$imageFileName';
-    _archiveFiles[imagePath] =
-        ArchiveFile(imagePath, image.bytes.length, image.bytes);
+
+    _archiveFiles[imagePath] = ArchiveFile(
+      imagePath,
+      image.bytes.length,
+      image.bytes,
+    );
   }
 
   void _updateDrawingXml(
@@ -84,20 +124,34 @@ class _ImageCellCreator {
     ImageCellValue image,
     int rId,
   ) {
-    final width = image.width != null ? image.width! * _emusPerPixel : 2000000;
-    final height =
-        image.height != null ? image.height! * _emusPerPixel : 2000000;
+    final int widthEmu = image.width * _emusPerPixel;
+    final int heightEmu = image.height * _emusPerPixel;
 
     String drawing;
     if (_archiveFiles.containsKey(drawingPath)) {
       drawing = _updateExistingDrawing(
-          drawingPath, columnIndex, rowIndex, width, height, rId);
+        drawingPath,
+        columnIndex,
+        rowIndex,
+        widthEmu,
+        heightEmu,
+        rId,
+      );
     } else {
-      drawing = _createNewDrawing(columnIndex, rowIndex, width, height, rId);
+      drawing = _createNewDrawing(
+        columnIndex,
+        rowIndex,
+        widthEmu,
+        heightEmu,
+        rId,
+      );
     }
 
-    _archiveFiles[drawingPath] =
-        ArchiveFile(drawingPath, drawing.length, utf8.encode(drawing));
+    _archiveFiles[drawingPath] = ArchiveFile(
+      drawingPath,
+      drawing.length,
+      utf8.encode(drawing),
+    );
   }
 
   String _updateExistingDrawing(
@@ -112,10 +166,16 @@ class _ImageCellCreator {
     var xmlDoc = XmlDocument.parse(existingDrawing);
     var wsDrElement = xmlDoc.findAllElements('xdr:wsDr').first;
 
-    var anchorElement =
-        _createAnchorElement(columnIndex, rowIndex, width, height, rId);
-    wsDrElement.children
-        .add(XmlDocument.parse(anchorElement).rootElement.copy());
+    var anchorElement = _createAnchorElement(
+      columnIndex,
+      rowIndex,
+      width,
+      height,
+      rId,
+    );
+    wsDrElement.children.add(
+      XmlDocument.parse(anchorElement).rootElement.copy(),
+    );
 
     return xmlDoc.toXmlString();
   }
@@ -205,8 +265,11 @@ class _ImageCellCreator {
     _addDrawingRelationship(relsRoot, drawingNumber);
 
     sheetRels = relsDoc.toXmlString();
-    _archiveFiles[sheetRelsPath] =
-        ArchiveFile(sheetRelsPath, sheetRels.length, utf8.encode(sheetRels));
+    _archiveFiles[sheetRelsPath] = ArchiveFile(
+      sheetRelsPath,
+      sheetRels.length,
+      utf8.encode(sheetRels),
+    );
   }
 
   XmlDocument _createNewRelationshipsDoc() {
@@ -217,9 +280,11 @@ class _ImageCellCreator {
         XmlAttribute(XmlName('standalone'), 'yes'),
       ]),
       XmlElement(XmlName('Relationships'), [
-        XmlAttribute(XmlName('xmlns'),
-            'http://schemas.openxmlformats.org/package/2006/relationships')
-      ], [])
+        XmlAttribute(
+          XmlName('xmlns'),
+          'http://schemas.openxmlformats.org/package/2006/relationships',
+        ),
+      ], []),
     ]);
   }
 
@@ -227,13 +292,12 @@ class _ImageCellCreator {
     var doc = XmlDocument.parse(content);
     if (!doc.rootElement.name.local.contains('Relationships')) {
       return XmlDocument([
-        XmlElement(
-            XmlName('Relationships'),
-            [
-              XmlAttribute(XmlName('xmlns'),
-                  'http://schemas.openxmlformats.org/package/2006/relationships')
-            ],
-            doc.rootElement.children)
+        XmlElement(XmlName('Relationships'), [
+          XmlAttribute(
+            XmlName('xmlns'),
+            'http://schemas.openxmlformats.org/package/2006/relationships',
+          ),
+        ], doc.rootElement.children),
       ]);
     }
     return doc;
@@ -245,16 +309,24 @@ class _ImageCellCreator {
         .none((element) => element.getAttribute("Id") == 'rId$drawingNumber')) {
       var newRel = XmlElement(XmlName('Relationship'), [
         XmlAttribute(XmlName('Id'), 'rId$drawingNumber'),
-        XmlAttribute(XmlName('Type'),
-            'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing'),
-        XmlAttribute(XmlName('Target'), '../drawings/drawing$drawingNumber.xml')
+        XmlAttribute(
+          XmlName('Type'),
+          'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing',
+        ),
+        XmlAttribute(
+          XmlName('Target'),
+          '../drawings/drawing$drawingNumber.xml',
+        ),
       ]);
       relsRoot.children.add(newRel);
     }
   }
 
   void _updateDrawingRelationships(
-      String drawingRelsPath, int rId, ImageCellValue image) {
+    String drawingRelsPath,
+    int rId,
+    ImageCellValue image,
+  ) {
     String drawingRels;
     if (_archiveFiles.containsKey(drawingRelsPath)) {
       drawingRels = _updateExistingDrawingRels(drawingRelsPath, rId, image);
@@ -262,31 +334,72 @@ class _ImageCellCreator {
       drawingRels = _createNewDrawingRels(rId, image);
     }
     _archiveFiles[drawingRelsPath] = ArchiveFile(
-        drawingRelsPath, drawingRels.length, utf8.encode(drawingRels));
+      drawingRelsPath,
+      drawingRels.length,
+      utf8.encode(drawingRels),
+    );
+  }
+
+  String _detectImageExtension(Uint8List bytes) {
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
+      return 'png';
+    }
+
+    if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
+      return 'jpg';
+    }
+
+    if (bytes.length >= 6 &&
+        bytes[0] == 0x47 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46) {
+      return 'gif';
+    }
+
+    throw ArgumentError('Unsupported image format');
   }
 
   String _updateExistingDrawingRels(
-      String drawingRelsPath, int rId, ImageCellValue image) {
-    var existingRels = utf8.decode(_archiveFiles[drawingRelsPath]!.content);
-    var relsDoc = XmlDocument.parse(existingRels);
-    var relationships = relsDoc.findAllElements('Relationships').first;
+    String drawingRelsPath,
+    int rId,
+    ImageCellValue image,
+  ) {
+    final existingRels = utf8.decode(_archiveFiles[drawingRelsPath]!.content);
 
-    relationships.children.add(XmlElement(XmlName('Relationship'), [
-      XmlAttribute(XmlName('Id'), 'rId$rId'),
-      XmlAttribute(XmlName('Type'),
-          'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'),
-      XmlAttribute(
-          XmlName('Target'), '../media/image$rId.${image.format.toLowerCase()}')
-    ]));
+    final relsDoc = XmlDocument.parse(existingRels);
+
+    final relationships = relsDoc.findAllElements('Relationships').first;
+
+    final extension = _detectImageExtension(image.bytes);
+
+    relationships.children.add(
+      XmlElement(XmlName('Relationship'), [
+        XmlAttribute(XmlName('Id'), 'rId$rId'),
+        XmlAttribute(
+          XmlName('Type'),
+          'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image',
+        ),
+        XmlAttribute(XmlName('Target'), '../media/image$rId.$extension'),
+      ]),
+    );
 
     return relsDoc.toXmlString();
   }
 
   String _createNewDrawingRels(int rId, ImageCellValue image) {
-    return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>                                                                                                                                                                               
- <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">                                                                                                                                                                
-   <Relationship Id="rId$rId" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image$rId.${image.format.toLowerCase()}"/>                                                                           
- </Relationships>''';
+    final extension = _detectImageExtension(image.bytes);
+
+    return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship 
+    Id="rId$rId" 
+    Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" 
+    Target="../media/image$rId.$extension"/>
+</Relationships>''';
   }
 
   XmlElement _createCellElement(int columnIndex, int rowIndex) {
@@ -300,9 +413,7 @@ class _ImageCellCreator {
 
     <String, ArchiveFile>{
       ..._archiveFiles,
-      ...Map.fromEntries(
-        _excel._archive.map((it) => MapEntry(it.name, it)),
-      ),
+      ...Map.fromEntries(_excel._archive.map((it) => MapEntry(it.name, it))),
     }.forEach((path, archiveFile) {
       if (path.endsWith('.rels')) {
         final content = utf8.decode(archiveFile.content);

@@ -163,7 +163,7 @@ class Save {
       case BoolCellValue():
         children = [
           XmlElement(XmlName('v'), [], [XmlText(value.value ? '1' : '0')]),
-        ];
+        ];  
     }
 
     return XmlElement(XmlName('c'), attributes, children);

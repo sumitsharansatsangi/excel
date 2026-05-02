@@ -164,7 +164,6 @@ sealed class NumFormat {
   bool accepts(CellValue? value);
 
   static NumFormat defaultFor(CellValue? value) => switch (value) {
-        ImageCellValue() => NumFormat.standard_0,
         null || FormulaCellValue() || TextCellValue() => NumFormat.standard_0,
         IntCellValue() => NumFormat.defaultNumeric,
         DoubleCellValue() => NumFormat.defaultFloat,
@@ -172,6 +171,7 @@ sealed class NumFormat {
         BoolCellValue() => NumFormat.defaultBool,
         TimeCellValue() => NumFormat.defaultTime,
         DateTimeCellValue() => NumFormat.defaultDateTime,
+        ImageCellValue() => NumFormat.defaultNumeric,
       };
 }
 

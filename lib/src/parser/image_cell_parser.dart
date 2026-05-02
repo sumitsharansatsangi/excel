@@ -81,7 +81,7 @@ class _ImageCellParser {
     return (cellColumnIndex, rowIndex);
   }
 
-  ({String path, List<int> bytes, String format, int? width, int? height})?
+  ({String path, Uint8List bytes, String format, int? width, int? height})?
       _getImageInfo(XmlElement anchor, String drawingPath) {
     final blip = anchor.findAllElements('a:blip').firstOrNull;
     if (blip == null) return null;
@@ -145,7 +145,7 @@ class _ImageCellParser {
   ImageCellValue? _createImageCellValue(
       ({
         String path,
-        List<int> bytes,
+        Uint8List bytes,
         String format,
         int? width,
         int? height

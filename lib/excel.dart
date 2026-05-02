@@ -3,9 +3,14 @@ library excel;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
 import 'package:equatable/equatable.dart';
+import 'package:excel/src/models/image_to_cell.dart';
+import 'package:excel/src/models/relations_target.dart';
+import 'package:image/image.dart' as img;
+import 'package:path/path.dart';
 import 'package:xml/xml.dart';
 import 'src/web_helper/client_save_excel.dart'
     if (dart.library.html) 'src/web_helper/web_save_excel_browser.dart'
