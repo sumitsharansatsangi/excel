@@ -622,6 +622,20 @@ void main() {
     },
   );
 
+  test('Saving shared strings escapes XML characters', () {
+    final excel = Excel.createExcel();
+    final sheet = excel['Sheet1'];
+    sheet.appendRow([TextCellValue('A&B <tag>')]);
+
+    final bytes = excel.encode()!;
+    final reloaded = Excel.decodeBytes(bytes);
+
+    expect(
+      reloaded['Sheet1'].cell(CellIndex.indexByString('A1')).value,
+      TextCellValue('A&B <tag>'),
+    );
+  });
+
   test('Saving XLSX File with superscript', () {
     var file = './test/test_resources/superscriptExample.xlsx';
     var bytes = File(file).readAsBytesSync();

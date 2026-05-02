@@ -1,5 +1,12 @@
 part of excel;
 
+String _escapeXml(String input) {
+  return input
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+}
+
 class _SharedStringsMaintainer {
   final Map<SharedString, _IndexingHolder> _map =
       <SharedString, _IndexingHolder>{};
@@ -14,15 +21,7 @@ class _SharedStringsMaintainer {
   }
 
   SharedString addFromString(String val) {
-    final newSharedString = SharedString(
-      node: XmlElement(XmlName('si'), [], [
-        XmlElement(
-          XmlName('t'),
-          [XmlAttribute(XmlName("space", "xml"), "preserve")],
-          [XmlText(val)],
-        ),
-      ]),
-    );
+    final newSharedString = SharedString._fromText(val);
 
     add(newSharedString, val);
     return newSharedString;
@@ -49,6 +48,12 @@ class _SharedStringsMaintainer {
     }
   }
 
+  void forEach(void Function(SharedString string, int count) fn) {
+    _map.forEach((string, holder) {
+      fn(string, holder.count);
+    });
+  }
+
   void clear() {
     _index = 0;
     _list.clear();
@@ -69,10 +74,23 @@ class _IndexingHolder {
 }
 
 class SharedString {
-  final XmlElement node;
-  final int _hashCode;
+  XmlElement? _node;
+  final String? _text;
+  late final int _hashCode = toXmlString().hashCode;
 
-  SharedString({required this.node}) : _hashCode = node.toString().hashCode;
+  SharedString({required XmlElement node}) : _node = node, _text = null;
+
+  SharedString._fromText(String text) : _node = null, _text = text;
+
+  XmlElement get node {
+    return _node ??= XmlElement(XmlName('si'), [], [
+      XmlElement(
+        XmlName('t'),
+        [XmlAttribute(XmlName("space", "xml"), "preserve")],
+        [XmlText(_text!)],
+      ),
+    ]);
+  }
 
   @override
   String toString() {
@@ -84,6 +102,10 @@ class SharedString {
   }
 
   TextSpan get textSpan {
+    if (_node == null) {
+      return TextSpan(text: _text);
+    }
+
     bool readOnOff(XmlElement element) {
       final value = element.getAttribute('val')?.trim().toLowerCase();
       return switch (value) {
@@ -189,6 +211,10 @@ class SharedString {
   }
 
   String get stringValue {
+    if (_text != null) {
+      return _text;
+    }
+
     var buffer = StringBuffer();
     node.findAllElements('t').forEach((child) {
       if (child.parentElement == null ||
@@ -197,6 +223,13 @@ class SharedString {
       }
     });
     return buffer.toString();
+  }
+
+  String toXmlString() {
+    if (_node == null) {
+      return '<si><t xml:space="preserve">${_escapeXml(_text!)}</t></si>';
+    }
+    return node.toString();
   }
 
   @override

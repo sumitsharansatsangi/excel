@@ -659,6 +659,9 @@ class Save {
     _ChartManager(_excel).processCharts();
 
     for (var xmlFile in _excel._xmlFiles.keys) {
+      if (_archiveFiles.containsKey(xmlFile)) {
+        continue;
+      }
       var xml = _excel._xmlFiles[xmlFile].toString();
       var content = utf8.encode(xml);
       _archiveFiles[xmlFile] = ArchiveFile(xmlFile, content.length, content);
@@ -997,31 +1000,21 @@ class Save {
   void _setSharedStrings() {
     var uniqueCount = 0;
     var count = 0;
+    final sharedStrings = StringBuffer();
 
-    XmlElement shareString = _excel
-        ._xmlFiles['xl/${_excel._sharedStringsTarget}']!
-        .findAllElements('sst')
-        .first;
-
-    shareString.children.clear();
-
-    _excel._sharedStrings._map.forEach((string, ss) {
+    _excel._sharedStrings.forEach((string, refCount) {
       uniqueCount += 1;
-      count += ss.count;
-
-      shareString.children.add(string.node);
+      count += refCount;
+      sharedStrings.write(string.toXmlString());
     });
 
-    [
-      ['count', '$count'],
-      ['uniqueCount', '$uniqueCount'],
-    ].forEach((value) {
-      if (shareString.getAttributeNode(value[0]) == null) {
-        shareString.attributes.add(XmlAttribute(XmlName(value[0]), value[1]));
-      } else {
-        shareString.getAttributeNode(value[0])!.value = value[1];
-      }
-    });
+    final xml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+        ' count="$count" uniqueCount="$uniqueCount">$sharedStrings</sst>';
+    final content = utf8.encode(xml);
+    final path = _excel._absSharedStringsTarget;
+    _archiveFiles[path] = ArchiveFile(path, content.length, content);
   }
 
   /// Writing cell contained text into the excel sheet files.
