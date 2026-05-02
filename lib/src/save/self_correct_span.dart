@@ -5,8 +5,9 @@ _selfCorrectSpanMap(Excel _excel) {
   _excel._mergeChangeLook.forEach((String key) {
     if (_excel._sheetMap[key] != null &&
         _excel._sheetMap[key]!._spanList.isNotEmpty) {
-      List<_Span?> spanList =
-          List<_Span?>.from(_excel._sheetMap[key]!._spanList);
+      List<_Span?> spanList = List<_Span?>.from(
+        _excel._sheetMap[key]!._spanList,
+      );
 
       for (int i = 0; i < spanList.length; i++) {
         _Span? checkerPos = spanList[i];
@@ -25,7 +26,12 @@ _selfCorrectSpanMap(Excel _excel) {
           }
 
           final locationChange = _isLocationChangeRequired(
-              startColumn, startRow, endColumn, endRow, spanObj);
+            startColumn,
+            startRow,
+            endColumn,
+            endRow,
+            spanObj,
+          );
           if (locationChange.$1) {
             startColumn = locationChange.$2.$1;
             startRow = locationChange.$2.$2;
@@ -34,11 +40,12 @@ _selfCorrectSpanMap(Excel _excel) {
             spanList[j] = null;
           } else {
             final locationChange2 = _isLocationChangeRequired(
-                spanObj.columnSpanStart,
-                spanObj.rowSpanStart,
-                spanObj.columnSpanEnd,
-                spanObj.rowSpanEnd,
-                checkerPos);
+              spanObj.columnSpanStart,
+              spanObj.rowSpanStart,
+              spanObj.columnSpanEnd,
+              spanObj.rowSpanEnd,
+              checkerPos,
+            );
 
             if (locationChange2.$1) {
               startColumn = locationChange2.$2.$1;

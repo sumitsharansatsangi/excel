@@ -5,10 +5,10 @@ class Border extends Equatable {
   final String? borderColorHex;
 
   Border({BorderStyle? borderStyle, ExcelColor? borderColorHex})
-      : borderStyle = borderStyle == BorderStyle.None ? null : borderStyle,
-        borderColorHex = borderColorHex != null
-            ? _isColorAppropriate(borderColorHex.colorHex)
-            : null;
+    : borderStyle = borderStyle == BorderStyle.None ? null : borderStyle,
+      borderColorHex = borderColorHex != null
+          ? _isColorAppropriate(borderColorHex.colorHex)
+          : null;
 
   @override
   String toString() {
@@ -16,10 +16,7 @@ class Border extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-        borderStyle,
-        borderColorHex,
-      ];
+  List<Object?> get props => [borderStyle, borderColorHex];
 }
 
 class _BorderSet extends Equatable {
@@ -63,14 +60,14 @@ class _BorderSet extends Equatable {
 
   @override
   List<Object?> get props => [
-        leftBorder,
-        rightBorder,
-        topBorder,
-        bottomBorder,
-        diagonalBorder,
-        diagonalBorderUp,
-        diagonalBorderDown,
-      ];
+    leftBorder,
+    rightBorder,
+    topBorder,
+    bottomBorder,
+    diagonalBorder,
+    diagonalBorderUp,
+    diagonalBorderDown,
+  ];
 }
 
 enum BorderStyle {
@@ -94,5 +91,6 @@ enum BorderStyle {
 }
 
 BorderStyle? getBorderStyleByName(String name) =>
-    BorderStyle.values.firstWhereOrNull((e) =>
-        e.toString().toLowerCase() == 'borderstyle.' + name.toLowerCase());
+    BorderStyle.values.firstWhereOrNull(
+      (e) => e.toString().toLowerCase() == 'borderstyle.' + name.toLowerCase(),
+    );

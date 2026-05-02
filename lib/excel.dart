@@ -37,7 +37,6 @@ part 'src/utilities/colors.dart';
 /// Save
 part 'src/save/save_file.dart';
 part 'src/save/image_cell_creator.dart';
-part 'src/parser/image_cell_parser.dart';
 part 'src/save/self_correct_span.dart';
 part 'src/parser/parse.dart';
 

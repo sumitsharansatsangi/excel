@@ -11,27 +11,39 @@ void main(List<String> args) {
   for (var row = 0; row < 100; row++) {
     sheet
         .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row))
-        .value = TextCellValue(getRandString());
+        .value = TextCellValue(
+      getRandString(),
+    );
 
     sheet
         .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: row))
-        .value = TextCellValue(getRandString());
+        .value = TextCellValue(
+      getRandString(),
+    );
 
     sheet
         .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: row))
-        .value = TextCellValue(getRandString());
+        .value = TextCellValue(
+      getRandString(),
+    );
 
     sheet
         .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row))
-        .value = TextCellValue(getRandString());
+        .value = TextCellValue(
+      getRandString(),
+    );
 
     sheet
         .cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: row))
-        .value = TextCellValue(getRandString());
+        .value = TextCellValue(
+      getRandString(),
+    );
 
     sheet
         .cell(CellIndex.indexByColumnRow(columnIndex: 50, rowIndex: row))
-        .value = TextCellValue(getRandString());
+        .value = TextCellValue(
+      getRandString(),
+    );
   }
 
   sheet.setDefaultColumnWidth();
@@ -47,8 +59,10 @@ void main(List<String> args) {
 
   sheet.setRowHeight(1, 100);
 
-  sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
-      CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 10));
+  sheet.merge(
+    CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+    CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 10),
+  );
 
   // Create the example excel file in the current directory
   String outputFile = "excel_custom.xlsx";

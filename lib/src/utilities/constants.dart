@@ -10,7 +10,7 @@ const _relationshipsImage =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
 
 const _relationshipsDrawing =
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing";    
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing";
 
 const _relationshipsSharedStrings =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings";

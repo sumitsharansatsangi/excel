@@ -2,7 +2,7 @@ part of excel;
 
 final List<String> _noCompression = <String>[
   'mimetype',
-  'Thumbnails/thumbnail.png'
+  'Thumbnails/thumbnail.png',
 ];
 
 String getCellId(int columnIndex, int rowIndex) {
@@ -39,11 +39,6 @@ int lettersToNumeric(String letters) {
 
 Iterable<XmlElement> _findRows(XmlElement table) {
   return table.findElements('row');
-}
-
-Iterable<XmlElement> _findDrawings(XmlElement table) {
-  var drawings = table.findAllElements('drawing');
-  return drawings;
 }
 
 Iterable<XmlElement> _findCells(XmlElement row) {
@@ -122,14 +117,18 @@ String _normalizeNewLine(String text) {
 ///
 (int x, int y) _cellCoordsFromCellId(String cellId) {
   var letters = cellId.runes.map(_letterOnly);
-  var lettersPart = utf8.decode(letters.where((rune) {
-    return rune > 0;
-  }).toList(growable: false));
+  var lettersPart = utf8.decode(
+    letters
+        .where((rune) {
+          return rune > 0;
+        })
+        .toList(growable: false),
+  );
   var numericsPart = cellId.substring(lettersPart.length);
 
   return (
     int.parse(numericsPart) - 1,
-    lettersToNumeric(lettersPart) - 1
+    lettersToNumeric(lettersPart) - 1,
   ); // [x , y]
 }
 
@@ -151,45 +150,45 @@ String getSpanCellId(int startColumn, int startRow, int endColumn, int endRow) {
 ///
 ///returns updated SpanObject location as there might be cross-sectional interaction between the two spanning objects.
 ///
-(
-  bool changeValue,
-  (int startColumn, int startRow, int endColumn, int endRow)
-) _isLocationChangeRequired(
-    int startColumn, int startRow, int endColumn, int endRow, _Span spanObj) {
-  bool changeValue = (
-          // Overlapping checker
-          startRow <= spanObj.rowSpanStart &&
-              startColumn <= spanObj.columnSpanStart &&
-              endRow >= spanObj.rowSpanEnd &&
-              endColumn >= spanObj.columnSpanEnd)
+(bool changeValue, (int startColumn, int startRow, int endColumn, int endRow))
+_isLocationChangeRequired(
+  int startColumn,
+  int startRow,
+  int endColumn,
+  int endRow,
+  _Span spanObj,
+) {
+  bool changeValue =
+      (
+      // Overlapping checker
+      startRow <= spanObj.rowSpanStart &&
+          startColumn <= spanObj.columnSpanStart &&
+          endRow >= spanObj.rowSpanEnd &&
+          endColumn >= spanObj.columnSpanEnd)
       // first check starts here
       ||
       ( // outwards checking
-          ((startColumn < spanObj.columnSpanStart &&
-                      endColumn >= spanObj.columnSpanStart) ||
-                  (startColumn <= spanObj.columnSpanEnd &&
-                      endColumn > spanObj.columnSpanEnd))
-              // inwards checking
-              &&
-              ((startRow >= spanObj.rowSpanStart &&
-                      startRow <= spanObj.rowSpanEnd) ||
-                  (endRow >= spanObj.rowSpanStart &&
-                      endRow <= spanObj.rowSpanEnd)))
-
+      ((startColumn < spanObj.columnSpanStart &&
+                  endColumn >= spanObj.columnSpanStart) ||
+              (startColumn <= spanObj.columnSpanEnd &&
+                  endColumn > spanObj.columnSpanEnd))
+          // inwards checking
+          &&
+          ((startRow >= spanObj.rowSpanStart &&
+                  startRow <= spanObj.rowSpanEnd) ||
+              (endRow >= spanObj.rowSpanStart && endRow <= spanObj.rowSpanEnd)))
       // second check starts here
       ||
       (
-          // outwards checking
-          ((startRow < spanObj.rowSpanStart &&
-                      endRow >= spanObj.rowSpanStart) ||
-                  (startRow <= spanObj.rowSpanEnd &&
-                      endRow > spanObj.rowSpanEnd))
-              // inwards checking
-              &&
-              ((startColumn >= spanObj.columnSpanStart &&
-                      startColumn <= spanObj.columnSpanEnd) ||
-                  (endColumn >= spanObj.columnSpanStart &&
-                      endColumn <= spanObj.columnSpanEnd)));
+      // outwards checking
+      ((startRow < spanObj.rowSpanStart && endRow >= spanObj.rowSpanStart) ||
+              (startRow <= spanObj.rowSpanEnd && endRow > spanObj.rowSpanEnd))
+          // inwards checking
+          &&
+          ((startColumn >= spanObj.columnSpanStart &&
+                  startColumn <= spanObj.columnSpanEnd) ||
+              (endColumn >= spanObj.columnSpanStart &&
+                  endColumn <= spanObj.columnSpanEnd)));
 
   if (changeValue) {
     if (startColumn > spanObj.columnSpanStart) {
@@ -235,7 +234,6 @@ int getColumnIndex(String columnAlphabet) {
 int _fontStyleIndex(List<_FontStyle> list, _FontStyle fontStyle) {
   return list.indexOf(fontStyle);
 }
-
 
 enum ImageFormat { png, jpeg, gif, unknown }
 

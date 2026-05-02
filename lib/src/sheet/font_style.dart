@@ -10,14 +10,15 @@ class _FontStyle extends Equatable {
   Underline _underline = Underline.None;
   int? _fontSize;
 
-  _FontStyle(
-      {ExcelColor? fontColorHex = ExcelColor.black,
-      int? fontSize,
-      String? fontFamily,
-      FontScheme fontScheme = FontScheme.Unset,
-      bool bold = false,
-      Underline underline = Underline.None,
-      bool italic = false}) {
+  _FontStyle({
+    ExcelColor? fontColorHex = ExcelColor.black,
+    int? fontSize,
+    String? fontFamily,
+    FontScheme fontScheme = FontScheme.Unset,
+    bool bold = false,
+    Underline underline = Underline.None,
+    bool italic = false,
+  }) {
     _bold = bold;
 
     _fontSize = fontSize;
@@ -115,11 +116,11 @@ class _FontStyle extends Equatable {
 
   @override
   List<Object?> get props => [
-        _bold,
-        _italic,
-        _fontSize,
-        _underline,
-        _fontFamily,
-        _fontColorHex,
-      ];
+    _bold,
+    _italic,
+    _fontSize,
+    _underline,
+    _fontFamily,
+    _fontColorHex,
+  ];
 }

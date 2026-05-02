@@ -10,14 +10,9 @@ void main() {
   const testSheetToKeepRename = 'Rename Of Sheet To Keep';
 
   var listDynamic = (List<List<dynamic>>.generate(
-      5, (_) => List<int>.generate(5, (i) => i + 1))
-    ..insert(0, [
-      'A',
-      'B',
-      'C',
-      'D',
-      'E',
-    ]));
+    5,
+    (_) => List<int>.generate(5, (i) => i + 1),
+  )..insert(0, ['A', 'B', 'C', 'D', 'E']));
 
   for (var row = 0; row < listDynamic.length; row++) {
     for (var column = 0; column < listDynamic[row].length; column++) {
@@ -27,8 +22,9 @@ void main() {
       );
       var colorList = List.of(ExcelColor.values);
       final border = Border(
-          borderColorHex: (colorList..shuffle()).first,
-          borderStyle: BorderStyle.Thin);
+        borderColorHex: (colorList..shuffle()).first,
+        borderStyle: BorderStyle.Thin,
+      );
 
       final string = listDynamic[row][column].toString();
 

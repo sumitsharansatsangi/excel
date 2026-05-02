@@ -15,10 +15,14 @@ class _SharedStringsMaintainer {
 
   SharedString addFromString(String val) {
     final newSharedString = SharedString(
-        node: XmlElement(XmlName('si'), [], [
-      XmlElement(XmlName('t'),
-          [XmlAttribute(XmlName("space", "xml"), "preserve")], [XmlText(val)]),
-    ]));
+      node: XmlElement(XmlName('si'), [], [
+        XmlElement(
+          XmlName('t'),
+          [XmlAttribute(XmlName("space", "xml"), "preserve")],
+          [XmlText(val)],
+        ),
+      ]),
+    );
 
     add(newSharedString, val);
     return newSharedString;
@@ -72,8 +76,10 @@ class SharedString {
 
   @override
   String toString() {
-    assert(false,
-        'prefer stringValue over SharedString.toString() in development');
+    assert(
+      false,
+      'prefer stringValue over SharedString.toString() in development',
+    );
     return stringValue;
   }
 
@@ -121,23 +127,28 @@ class SharedString {
                       break;
                     case 'u': //18.4.13 u (Underline)
                       style = style.copyWith(
-                          underlineVal:
-                              runProperty.getAttribute('val') == 'double'
-                                  ? Underline.Double
-                                  : Underline.Single);
+                        underlineVal:
+                            runProperty.getAttribute('val') == 'double'
+                            ? Underline.Double
+                            : Underline.Single,
+                      );
                       break;
                     case 'sz': //18.4.11 sz (Font Size)
-                      style =
-                          style.copyWith(fontSizeVal: getDouble(runProperty));
+                      style = style.copyWith(
+                        fontSizeVal: getDouble(runProperty),
+                      );
                       break;
                     case 'rFont': //18.4.5 rFont (Font)
                       style = style.copyWith(
-                          fontFamilyVal: runProperty.getAttribute('val'));
+                        fontFamilyVal: runProperty.getAttribute('val'),
+                      );
                       break;
                     case 'color': //18.3.1.15 color (Data Bar Color)
                       style = style.copyWith(
-                          fontColorHexVal:
-                              runProperty.getAttribute('rgb')?.excelColor);
+                        fontColorHexVal: runProperty
+                            .getAttribute('rgb')
+                            ?.excelColor,
+                      );
                       break;
                   }
                 }

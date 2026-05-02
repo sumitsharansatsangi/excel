@@ -6,11 +6,15 @@ void main(List<String> args) {
   var excel = Excel.createExcel();
   final Sheet sheet = excel[excel.getDefaultSheet()!];
 
-  sheet.merge(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1),
-      CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: 5));
+  sheet.merge(
+    CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1),
+    CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: 5),
+  );
 
-  sheet.merge(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 10),
-      CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 10));
+  sheet.merge(
+    CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 10),
+    CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 10),
+  );
 
   Border border = Border(
     borderColorHex: "#FF000000".excelColor,

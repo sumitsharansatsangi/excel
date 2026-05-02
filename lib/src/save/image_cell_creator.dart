@@ -21,22 +21,33 @@ class _ImageCellCreator {
     final worksheet = _excel._xmlFiles[worksheetPath]!;
     final sheetName = worksheetPath.split('/').last;
     final sheetRelsPath = 'xl/worksheets/_rels/$sheetName.rels';
-    final rId = _getAvailableRid(sheetRelsPath);
 
-    final drawingInfo = _setupDrawing(worksheet, rId);
+    final drawingInfo = _setupDrawing(worksheet, sheetRelsPath);
     final drawingPath = 'xl/drawings/drawing${drawingInfo.drawingNumber}.xml';
     final drawingRelsPath =
         'xl/drawings/_rels/drawing${drawingInfo.drawingNumber}.xml.rels';
+    final imageRId = _getAvailableRid(drawingRelsPath);
+    final imageFileName = _getAvailableImageFileName(image);
 
-    _addImageFile(image, rId);
-    _updateDrawingXml(drawingPath, columnIndex, rowIndex, image, rId);
+    _addImageFile(image, imageFileName);
+    _updateDrawingXml(
+      drawingPath,
+      columnIndex,
+      rowIndex,
+      image,
+      imageRId,
+      imageFileName,
+    );
     _updateRelationships(
       sheetRelsPath,
       drawingRelsPath,
       drawingInfo.drawingNumber,
-      rId,
+      drawingInfo.drawingRId,
+      imageRId,
       image,
+      imageFileName,
     );
+    _updateContentTypes(drawingInfo.drawingNumber, imageFileName);
 
     return _createCellElement(columnIndex, rowIndex);
   }
@@ -75,12 +86,29 @@ class _ImageCellCreator {
   }
 
   ({XmlElement? existingDrawing, String drawingRId, int drawingNumber})
-  _setupDrawing(XmlDocument worksheet, int rId) {
+  _setupDrawing(XmlDocument worksheet, String sheetRelsPath) {
     final existingDrawing = worksheet.findAllElements('drawing').firstOrNull;
-    final drawingRId = existingDrawing?.getAttribute('r:id') ?? 'rId$rId';
-    final drawingNumber = existingDrawing != null
-        ? int.parse(drawingRId.replaceAll(RegExp(r'\D'), ''))
-        : rId;
+    if (existingDrawing != null) {
+      final drawingRId = existingDrawing.getAttribute('r:id');
+      final drawingTarget = drawingRId == null
+          ? null
+          : _relationshipTarget(sheetRelsPath, drawingRId);
+      final drawingNumber =
+          _drawingNumberFromTarget(drawingTarget) ??
+          int.tryParse(drawingRId?.replaceAll(RegExp(r'\D'), '') ?? '');
+
+      if (drawingRId != null && drawingNumber != null) {
+        return (
+          existingDrawing: existingDrawing,
+          drawingRId: drawingRId,
+          drawingNumber: drawingNumber,
+        );
+      }
+    }
+
+    final drawingRId = 'rId${_getAvailableRid(sheetRelsPath)}';
+    final drawingNumber = _getNextDrawingNumber();
+    _addWorksheetDrawingElement(worksheet, drawingRId);
 
     return (
       existingDrawing: existingDrawing,
@@ -89,25 +117,23 @@ class _ImageCellCreator {
     );
   }
 
-  void _addImageFile(ImageCellValue image, int rId) {
+  void _addWorksheetDrawingElement(XmlDocument worksheet, String drawingRId) {
+    final drawingElement = XmlElement(XmlName('drawing'), [
+      XmlAttribute(XmlName('r:id'), drawingRId),
+    ]);
+    final sheetData = worksheet.findAllElements('sheetData').firstOrNull;
+    final worksheetElement = worksheet.rootElement;
+    final index = sheetData == null
+        ? worksheetElement.children.length
+        : worksheetElement.children.indexOf(sheetData) + 1;
+    worksheetElement.children.insert(index, drawingElement);
+  }
+
+  void _addImageFile(ImageCellValue image, String imageFileName) {
     if (image.bytes.isEmpty) {
       throw ArgumentError('Image bytes cannot be empty');
     }
 
-    final format = detectFormat(image.bytes);
-
-    if (format == ImageFormat.unknown) {
-      throw ArgumentError('Unsupported image format');
-    }
-
-    final extension = switch (format) {
-      ImageFormat.png => 'png',
-      ImageFormat.jpeg => 'jpg',
-      ImageFormat.gif => 'gif',
-      ImageFormat.unknown => throw ArgumentError('Unsupported image format'),
-    };
-
-    final imageFileName = 'image$rId.$extension';
     final imagePath = 'xl/media/$imageFileName';
 
     _archiveFiles[imagePath] = ArchiveFile(
@@ -123,19 +149,22 @@ class _ImageCellCreator {
     int rowIndex,
     ImageCellValue image,
     int rId,
+    String imageFileName,
   ) {
     final int widthEmu = image.width * _emusPerPixel;
     final int heightEmu = image.height * _emusPerPixel;
 
     String drawing;
-    if (_archiveFiles.containsKey(drawingPath)) {
+    final existingDrawing = _readArchiveText(drawingPath);
+    if (existingDrawing != null) {
       drawing = _updateExistingDrawing(
-        drawingPath,
+        existingDrawing,
         columnIndex,
         rowIndex,
         widthEmu,
         heightEmu,
         rId,
+        imageFileName,
       );
     } else {
       drawing = _createNewDrawing(
@@ -144,6 +173,7 @@ class _ImageCellCreator {
         widthEmu,
         heightEmu,
         rId,
+        imageFileName,
       );
     }
 
@@ -155,14 +185,14 @@ class _ImageCellCreator {
   }
 
   String _updateExistingDrawing(
-    String drawingPath,
+    String existingDrawing,
     int columnIndex,
     int rowIndex,
     int width,
     int height,
     int rId,
+    String imageFileName,
   ) {
-    var existingDrawing = utf8.decode(_archiveFiles[drawingPath]!.content);
     var xmlDoc = XmlDocument.parse(existingDrawing);
     var wsDrElement = xmlDoc.findAllElements('xdr:wsDr').first;
 
@@ -172,6 +202,7 @@ class _ImageCellCreator {
       width,
       height,
       rId,
+      imageFileName,
     );
     wsDrElement.children.add(
       XmlDocument.parse(anchorElement).rootElement.copy(),
@@ -186,20 +217,14 @@ class _ImageCellCreator {
     int width,
     int height,
     int rId,
+    String imageFileName,
   ) {
-    return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>                                                                                                                                                                               
- <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"                                                                                                                                                           
-           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"                                                                                                                                                                           
-           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"                                                                                                                                                             
-           xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"                                                                                                                                                                          
-           xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex"                                                                                                                                                                       
-           xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex"                                                                                                                                                                  
-           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"                                                                                                                                                                    
-           xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram"                                                                                                                                                                      
-           xmlns:x3Unk="http://schemas.microsoft.com/office/drawing/2010/slicer"                                                                                                                                                                     
-           xmlns:sle15="http://schemas.microsoft.com/office/drawing/2012/slicer">                                                                                                                                                                    
-   ${_createAnchorElement(columnIndex, rowIndex, width, height, rId)}                                                                                                                                                                                
- </xdr:wsDr>''';
+    return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  ${_createAnchorElement(columnIndex, rowIndex, width, height, rId, imageFileName)}
+</xdr:wsDr>''';
   }
 
   String _createAnchorElement(
@@ -208,51 +233,63 @@ class _ImageCellCreator {
     int width,
     int height,
     int rId,
+    String imageFileName,
   ) {
-    return '''<xdr:oneCellAnchor editAs="TwoCell">                                                                                                                                                                                                                   
-     <xdr:from>                                                                                                                                                                                                                                      
-       <xdr:col>$columnIndex</xdr:col>                                                                                                                                                                                                               
-       <xdr:colOff>0</xdr:colOff>                                                                                                                                                                                                                    
-       <xdr:row>$rowIndex</xdr:row>                                                                                                                                                                                                                  
-       <xdr:rowOff>0</xdr:rowOff>                                                                                                                                                                                                                    
-     </xdr:from>                                                                                                                                                                                                                                     
-     <xdr:ext cx="$width" cy="$height"/>                                                                                                                                                                                                             
-     <xdr:pic>                                                                                                                                                                                                                                       
-       <xdr:nvPicPr>                                                                                                                                                                                                                                 
-         <xdr:cNvPr id="$rId" name="image$rId.png"/>                                                                                                                                                                                                 
-         <xdr:cNvPicPr preferRelativeResize="0"/>                                                                                                                                                                                                    
-       </xdr:nvPicPr>                                                                                                                                                                                                                                
-       <xdr:blipFill>                                                                                                                                                                                                                                
-         <a:blip cstate="print" r:embed="rId$rId"/>                                                                                                                                                                                                  
-         <a:stretch>                                                                                                                                                                                                                                 
-           <a:fillRect/>                                                                                                                                                                                                                             
-         </a:stretch>                                                                                                                                                                                                                                
-       </xdr:blipFill>                                                                                                                                                                                                                               
-       <xdr:spPr>                                                                                                                                                                                                                                    
-         <a:prstGeom prst="rect">                                                                                                                                                                                                                    
-           <a:avLst/>                                                                                                                                                                                                                                
-         </a:prstGeom>                                                                                                                                                                                                                               
-         <a:noFill/>                                                                                                                                                                                                                                 
-       </xdr:spPr>                                                                                                                                                                                                                                   
-     </xdr:pic>                                                                                                                                                                                                                                      
-     <xdr:clientData fLocksWithSheet="0"/>                                                                                                                                                                                                           
-   </xdr:oneCellAnchor>''';
+    return '''<xdr:oneCellAnchor editAs="twoCell">
+  <xdr:from>
+    <xdr:col>$columnIndex</xdr:col>
+    <xdr:colOff>0</xdr:colOff>
+    <xdr:row>$rowIndex</xdr:row>
+    <xdr:rowOff>0</xdr:rowOff>
+  </xdr:from>
+  <xdr:ext cx="$width" cy="$height"/>
+  <xdr:pic>
+    <xdr:nvPicPr>
+      <xdr:cNvPr id="$rId" name="$imageFileName"/>
+      <xdr:cNvPicPr preferRelativeResize="0"/>
+    </xdr:nvPicPr>
+    <xdr:blipFill>
+      <a:blip cstate="print" r:embed="rId$rId"/>
+      <a:stretch>
+        <a:fillRect/>
+      </a:stretch>
+    </xdr:blipFill>
+    <xdr:spPr>
+      <a:prstGeom prst="rect">
+        <a:avLst/>
+      </a:prstGeom>
+      <a:noFill/>
+    </xdr:spPr>
+  </xdr:pic>
+  <xdr:clientData fLocksWithSheet="0"/>
+</xdr:oneCellAnchor>''';
   }
 
   void _updateRelationships(
     String sheetRelsPath,
     String drawingRelsPath,
     int drawingNumber,
-    int rId,
+    String drawingRId,
+    int imageRId,
     ImageCellValue image,
+    String imageFileName,
   ) {
-    _updateSheetRelationships(sheetRelsPath, drawingNumber);
-    _updateDrawingRelationships(drawingRelsPath, rId, image);
+    _updateSheetRelationships(sheetRelsPath, drawingNumber, drawingRId);
+    _updateDrawingRelationships(
+      drawingRelsPath,
+      imageRId,
+      image,
+      imageFileName,
+    );
   }
 
-  void _updateSheetRelationships(String sheetRelsPath, int drawingNumber) {
+  void _updateSheetRelationships(
+    String sheetRelsPath,
+    int drawingNumber,
+    String drawingRId,
+  ) {
     String sheetRels;
-    var content = utf8.decode(_archiveFiles[sheetRelsPath]?.content ?? []);
+    var content = _readArchiveText(sheetRelsPath) ?? '';
     XmlDocument relsDoc;
 
     if (content.isEmpty) {
@@ -262,7 +299,7 @@ class _ImageCellCreator {
     }
 
     var relsRoot = relsDoc.rootElement;
-    _addDrawingRelationship(relsRoot, drawingNumber);
+    _addDrawingRelationship(relsRoot, drawingNumber, drawingRId);
 
     sheetRels = relsDoc.toXmlString();
     _archiveFiles[sheetRelsPath] = ArchiveFile(
@@ -303,12 +340,16 @@ class _ImageCellCreator {
     return doc;
   }
 
-  void _addDrawingRelationship(XmlElement relsRoot, int drawingNumber) {
+  void _addDrawingRelationship(
+    XmlElement relsRoot,
+    int drawingNumber,
+    String drawingRId,
+  ) {
     if (relsRoot
         .findElements("Relationship")
-        .none((element) => element.getAttribute("Id") == 'rId$drawingNumber')) {
+        .none((element) => element.getAttribute("Id") == drawingRId)) {
       var newRel = XmlElement(XmlName('Relationship'), [
-        XmlAttribute(XmlName('Id'), 'rId$drawingNumber'),
+        XmlAttribute(XmlName('Id'), drawingRId),
         XmlAttribute(
           XmlName('Type'),
           'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing',
@@ -326,12 +367,18 @@ class _ImageCellCreator {
     String drawingRelsPath,
     int rId,
     ImageCellValue image,
+    String imageFileName,
   ) {
     String drawingRels;
-    if (_archiveFiles.containsKey(drawingRelsPath)) {
-      drawingRels = _updateExistingDrawingRels(drawingRelsPath, rId, image);
+    final existingDrawingRels = _readArchiveText(drawingRelsPath);
+    if (existingDrawingRels != null) {
+      drawingRels = _updateExistingDrawingRels(
+        existingDrawingRels,
+        rId,
+        imageFileName,
+      );
     } else {
-      drawingRels = _createNewDrawingRels(rId, image);
+      drawingRels = _createNewDrawingRels(rId, imageFileName);
     }
     _archiveFiles[drawingRelsPath] = ArchiveFile(
       drawingRelsPath,
@@ -364,17 +411,13 @@ class _ImageCellCreator {
   }
 
   String _updateExistingDrawingRels(
-    String drawingRelsPath,
+    String existingRels,
     int rId,
-    ImageCellValue image,
+    String imageFileName,
   ) {
-    final existingRels = utf8.decode(_archiveFiles[drawingRelsPath]!.content);
-
     final relsDoc = XmlDocument.parse(existingRels);
 
     final relationships = relsDoc.findAllElements('Relationships').first;
-
-    final extension = _detectImageExtension(image.bytes);
 
     relationships.children.add(
       XmlElement(XmlName('Relationship'), [
@@ -383,22 +426,20 @@ class _ImageCellCreator {
           XmlName('Type'),
           'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image',
         ),
-        XmlAttribute(XmlName('Target'), '../media/image$rId.$extension'),
+        XmlAttribute(XmlName('Target'), '../media/$imageFileName'),
       ]),
     );
 
     return relsDoc.toXmlString();
   }
 
-  String _createNewDrawingRels(int rId, ImageCellValue image) {
-    final extension = _detectImageExtension(image.bytes);
-
+  String _createNewDrawingRels(int rId, String imageFileName) {
     return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship 
     Id="rId$rId" 
     Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" 
-    Target="../media/image$rId.$extension"/>
+    Target="../media/$imageFileName"/>
 </Relationships>''';
   }
 
@@ -408,28 +449,162 @@ class _ImageCellCreator {
     ], []);
   }
 
-  int _getAvailableRid(String sheetRelsPath) {
-    final allRids = <int>[];
+  void _updateContentTypes(int drawingNumber, String imageFileName) {
+    final contentTypes = _excel._xmlFiles['[Content_Types].xml'];
+    if (contentTypes == null) {
+      return;
+    }
 
-    <String, ArchiveFile>{
-      ..._archiveFiles,
-      ...Map.fromEntries(_excel._archive.map((it) => MapEntry(it.name, it))),
-    }.forEach((path, archiveFile) {
-      if (path.endsWith('.rels')) {
-        final content = utf8.decode(archiveFile.content);
-        if (content.isNotEmpty) {
-          final doc = XmlDocument.parse(content);
-          final rIds = doc
-              .findAllElements('Relationship')
-              .map((e) => e.getAttribute('Id'))
-              .whereType<String>()
-              .where((id) => id.startsWith('rId'))
-              .map((id) => int.parse(id.substring(3)));
-          allRids.addAll(rIds);
-        }
-      }
-    });
+    final root = contentTypes.rootElement;
+    final imageExtension = extension(
+      imageFileName,
+    ).replaceFirst('.', '').toLowerCase();
+    final imageContentType = switch (imageExtension) {
+      'png' => 'image/png',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'gif' => 'image/gif',
+      _ => null,
+    };
+
+    if (imageContentType != null) {
+      _addDefaultContentType(root, imageExtension, imageContentType);
+    }
+
+    _addOverrideContentType(
+      root,
+      '/xl/drawings/drawing$drawingNumber.xml',
+      'application/vnd.openxmlformats-officedocument.drawing+xml',
+    );
+  }
+
+  void _addDefaultContentType(
+    XmlElement root,
+    String extension,
+    String contentType,
+  ) {
+    final exists = root
+        .findElements('Default')
+        .any((element) => element.getAttribute('Extension') == extension);
+    if (exists) {
+      return;
+    }
+
+    root.children.add(
+      XmlElement(XmlName('Default'), [
+        XmlAttribute(XmlName('Extension'), extension),
+        XmlAttribute(XmlName('ContentType'), contentType),
+      ]),
+    );
+  }
+
+  void _addOverrideContentType(
+    XmlElement root,
+    String partName,
+    String contentType,
+  ) {
+    final exists = root
+        .findElements('Override')
+        .any((element) => element.getAttribute('PartName') == partName);
+    if (exists) {
+      return;
+    }
+
+    root.children.add(
+      XmlElement(XmlName('Override'), [
+        XmlAttribute(XmlName('PartName'), partName),
+        XmlAttribute(XmlName('ContentType'), contentType),
+      ]),
+    );
+  }
+
+  int _getAvailableRid(String sheetRelsPath) {
+    final content = _readArchiveText(sheetRelsPath);
+    if (content == null || content.isEmpty) {
+      return 1;
+    }
+
+    final doc = XmlDocument.parse(content);
+    final allRids = doc
+        .findAllElements('Relationship')
+        .map((e) => e.getAttribute('Id'))
+        .whereType<String>()
+        .where((id) => id.startsWith('rId'))
+        .map((id) => int.tryParse(id.substring(3)))
+        .whereType<int>()
+        .toList();
 
     return allRids.isEmpty ? 1 : (allRids.reduce(max) + 1);
+  }
+
+  String _getAvailableImageFileName(ImageCellValue image) {
+    final extension = _detectImageExtension(image.bytes);
+    return 'image${_getNextMediaNumber()}.$extension';
+  }
+
+  int _getNextDrawingNumber() {
+    final numbers = _allArchivePaths()
+        .map(
+          (path) => RegExp(r'^xl/drawings/drawing(\d+)\.xml$').firstMatch(path),
+        )
+        .whereType<RegExpMatch>()
+        .map((match) => int.tryParse(match.group(1)!))
+        .whereType<int>()
+        .toList();
+
+    return numbers.isEmpty ? 1 : numbers.reduce(max) + 1;
+  }
+
+  int _getNextMediaNumber() {
+    final numbers = _allArchivePaths()
+        .map((path) => RegExp(r'^xl/media/image(\d+)\.[^.]+$').firstMatch(path))
+        .whereType<RegExpMatch>()
+        .map((match) => int.tryParse(match.group(1)!))
+        .whereType<int>()
+        .toList();
+
+    return numbers.isEmpty ? 1 : numbers.reduce(max) + 1;
+  }
+
+  int? _drawingNumberFromTarget(String? target) {
+    if (target == null) {
+      return null;
+    }
+
+    final match = RegExp(r'drawing(\d+)\.xml$').firstMatch(target);
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+
+  String? _relationshipTarget(String relsPath, String id) {
+    final content = _readArchiveText(relsPath);
+    if (content == null || content.isEmpty) {
+      return null;
+    }
+
+    final relationship = XmlDocument.parse(content)
+        .findAllElements('Relationship')
+        .firstWhereOrNull((element) => element.getAttribute('Id') == id);
+    final target = relationship?.getAttribute('Target');
+    if (target == null) {
+      return null;
+    }
+
+    return target.startsWith('../')
+        ? 'xl/${target.substring(3)}'
+        : 'xl/worksheets/$target';
+  }
+
+  String? _readArchiveText(String path) {
+    final archiveFile = _archiveFiles[path] ?? _excel._archive.findFile(path);
+    if (archiveFile == null) {
+      return null;
+    }
+
+    archiveFile.decompress();
+    return utf8.decode(archiveFile.content);
+  }
+
+  Iterable<String> _allArchivePaths() sync* {
+    yield* _excel._archive.files.map((file) => file.name);
+    yield* _archiveFiles.keys;
   }
 }
