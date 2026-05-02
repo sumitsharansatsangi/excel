@@ -824,7 +824,10 @@ class Parser {
     CellValue? value;
     final formulaNode = node.findElements('f').firstOrNull;
     if (formulaNode != null) {
-      value = FormulaCellValue(_parseValue(formulaNode).toString());
+      value = FormulaCellValue(
+        _parseValue(formulaNode).toString(),
+        isArrayFormula: formulaNode.getAttribute('t') == 'array',
+      );
       sheetObject.updateCell(
         CellIndex.indexByColumnRow(
           columnIndex: columnIndex,

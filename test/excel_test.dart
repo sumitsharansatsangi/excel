@@ -1439,6 +1439,34 @@ void main() {
     );
   });
 
+  test('Array formulas round-trip', () {
+    final excel = Excel.createExcel();
+    final sheet = excel['Sheet1'];
+    sheet.cell(CellIndex.indexByString('B2')).value = const FormulaCellValue(
+      '=SUM(A1:A3)',
+      isArrayFormula: true,
+    );
+
+    final bytes = excel.encode()!;
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final sheetXml = archive.findFile('xl/worksheets/sheet1.xml')!;
+    final doc = XmlDocument.parse(utf8.decode(sheetXml.content));
+    final formula = doc
+        .findAllElements('c')
+        .firstWhere((cell) => cell.getAttribute('r') == 'B2')
+        .findElements('f')
+        .first;
+
+    expect(formula.getAttribute('t'), 'array');
+    expect(formula.getAttribute('ref'), 'B2:B2');
+
+    final decoded = Excel.decodeBytes(bytes);
+    expect(
+      decoded['Sheet1'].cell(CellIndex.indexByString('B2')).value,
+      const FormulaCellValue('=SUM(A1:A3)', isArrayFormula: true),
+    );
+  });
+
   group('Style preservation on round-trip', () {
     test('writing into one cell keeps an untouched cell style intact', () {
       final bytes = File(

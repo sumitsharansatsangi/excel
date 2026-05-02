@@ -120,8 +120,12 @@ class Save {
         //this will never be called as we are handling it in the above if condition
         children = [];
       case FormulaCellValue():
+        final formulaAttributes = <XmlAttribute>[
+          if (value.isArrayFormula) XmlAttribute(XmlName('t'), 'array'),
+          if (value.isArrayFormula) XmlAttribute(XmlName('ref'), '$rC:$rC'),
+        ];
         children = [
-          XmlElement(XmlName('f'), [], [XmlText(value.formula)]),
+          XmlElement(XmlName('f'), formulaAttributes, [XmlText(value.formula)]),
           XmlElement(XmlName('v'), [], [XmlText('')]),
         ];
       case IntCellValue():

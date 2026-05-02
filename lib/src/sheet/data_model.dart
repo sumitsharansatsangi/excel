@@ -124,8 +124,9 @@ sealed class CellValue {
 
 class FormulaCellValue extends CellValue {
   final String formula;
+  final bool isArrayFormula;
 
-  const FormulaCellValue(this.formula);
+  const FormulaCellValue(this.formula, {this.isArrayFormula = false});
 
   @override
   String toString() {
@@ -133,11 +134,13 @@ class FormulaCellValue extends CellValue {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, formula);
+  int get hashCode => Object.hash(runtimeType, formula, isArrayFormula);
 
   @override
   operator ==(Object other) {
-    return other is FormulaCellValue && other.formula == formula;
+    return other is FormulaCellValue &&
+        other.formula == formula &&
+        other.isArrayFormula == isArrayFormula;
   }
 }
 
