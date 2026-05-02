@@ -284,6 +284,15 @@ void main() {
     expect(b1_2.value, equals(DoubleCellValue(123456.789)));
   });
 
+  test('Recognizes accounting built-in number formats', () {
+    final formats = NumFormatMaintainer();
+
+    expect(formats.getByNumFmtId(41), equals(NumFormat.standard_41));
+    expect(formats.getByNumFmtId(42), equals(NumFormat.standard_42));
+    expect(formats.getByNumFmtId(43), equals(NumFormat.standard_43));
+    expect(formats.getByNumFmtId(44), equals(NumFormat.standard_44));
+  });
+
   group('Sheet Operations', () {
     var file = './test/test_resources/example.xlsx';
     var bytes = File(file).readAsBytesSync();
@@ -962,6 +971,31 @@ void main() {
       expect(cellA3.value.children![0].style!.fontFamily, "Skia");
       expect(cellA3.value.children![1].style!.fontFamily, "Arial");
     });
+
+    test('read rich text on/off and underline values', () {
+      final sharedString = SharedString(
+        node: XmlDocument.parse('''
+<si>
+  <r>
+    <rPr><b val="0"/><i val="false"/><u val="none"/></rPr>
+    <t>off</t>
+  </r>
+  <r>
+    <rPr><b/><i val="1"/><u val="double"/></rPr>
+    <t>on</t>
+  </r>
+</si>
+''').rootElement,
+      );
+
+      final spans = sharedString.textSpan.children!;
+      expect(spans[0].style!.isBold, isFalse);
+      expect(spans[0].style!.isItalic, isFalse);
+      expect(spans[0].style!.underline, Underline.None);
+      expect(spans[1].style!.isBold, isTrue);
+      expect(spans[1].style!.isItalic, isTrue);
+      expect(spans[1].style!.underline, Underline.Double);
+    });
   });
 
   group('rPh tag', () {
@@ -1236,5 +1270,72 @@ void main() {
       returnsNormally,
       reason: 'Decoding the file should not throw any exception',
     );
+  });
+
+  group('Style preservation on round-trip', () {
+    test('writing into one cell keeps an untouched cell style intact', () {
+      final bytes = File(
+        './test/test_resources/borders.xlsx',
+      ).readAsBytesSync();
+      final excel = Excel.decodeBytes(bytes);
+      final sheet = excel.tables['Sheet1']!;
+
+      final preserved = sheet.cell(CellIndex.indexByString('A1'));
+      final beforeStyle = preserved.cellStyle;
+      expect(beforeStyle, isNotNull);
+      expect(beforeStyle!.isBold, isTrue);
+      expect(beforeStyle.leftBorder.borderStyle, equals(BorderStyle.Medium));
+
+      sheet.updateCell(CellIndex.indexByString('Z50'), TextCellValue('marker'));
+
+      final reloaded = Excel.decodeBytes(excel.encode()!);
+      final after = reloaded.tables['Sheet1']!.cell(
+        CellIndex.indexByString('A1'),
+      );
+
+      expect(after.value, equals(preserved.value));
+      expect(after.cellStyle?.isBold, equals(beforeStyle.isBold));
+      expect(
+        after.cellStyle?.leftBorder.borderStyle,
+        equals(beforeStyle.leftBorder.borderStyle),
+      );
+      expect(
+        after.cellStyle?.backgroundColor,
+        equals(beforeStyle.backgroundColor),
+      );
+      expect(after.cellStyle?.fontFamily, equals(beforeStyle.fontFamily));
+    });
+
+    test('overwriting a styled cell value preserves visual style', () {
+      final bytes = File(
+        './test/test_resources/borders.xlsx',
+      ).readAsBytesSync();
+      final excel = Excel.decodeBytes(bytes);
+      final sheet = excel.tables['Sheet1']!;
+      final target = sheet.cell(CellIndex.indexByString('A1'));
+      final beforeStyle = target.cellStyle!;
+
+      sheet.updateCell(CellIndex.indexByString('A1'), TextCellValue('Renamed'));
+
+      final reloaded = Excel.decodeBytes(excel.encode()!);
+      final after = reloaded.tables['Sheet1']!.cell(
+        CellIndex.indexByString('A1'),
+      );
+
+      expect(after.value, equals(TextCellValue('Renamed')));
+      expect(after.cellStyle?.isBold, equals(beforeStyle.isBold));
+      expect(
+        after.cellStyle?.leftBorder.borderStyle,
+        equals(beforeStyle.leftBorder.borderStyle),
+      );
+      expect(
+        after.cellStyle?.bottomBorder.borderStyle,
+        equals(beforeStyle.bottomBorder.borderStyle),
+      );
+      expect(
+        after.cellStyle?.backgroundColor,
+        equals(beforeStyle.backgroundColor),
+      );
+    });
   });
 }

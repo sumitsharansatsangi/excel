@@ -155,6 +155,22 @@ sealed class NumFormat {
     numFmtId: 40,
     formatCode: "#,##0.00;[Red](#,#)",
   );
+  static const standard_41 = StandardNumericNumFormat._(
+    numFmtId: 41,
+    formatCode: r'_(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)',
+  );
+  static const standard_42 = StandardNumericNumFormat._(
+    numFmtId: 42,
+    formatCode: r'_($* #,##0_);_($* (#,##0);_($* "-"_);_(@_)',
+  );
+  static const standard_43 = StandardNumericNumFormat._(
+    numFmtId: 43,
+    formatCode: r'_(* #,##0.00_);_(* (#,##0.00);_(* "-"??_);_(@_)',
+  );
+  static const standard_44 = StandardNumericNumFormat._(
+    numFmtId: 44,
+    formatCode: r'_($* #,##0.00_);_($* (#,##0.00);_($* "-"??_);_(@_)',
+  );
   static const standard_45 = StandardTimeNumFormat._(
     numFmtId: 45,
     formatCode: "mm:ss",
@@ -252,6 +268,10 @@ const Map<int, NumFormat> _standardNumFormats = {
   38: NumFormat.standard_38,
   39: NumFormat.standard_39,
   40: NumFormat.standard_40,
+  41: NumFormat.standard_41,
+  42: NumFormat.standard_42,
+  43: NumFormat.standard_43,
+  44: NumFormat.standard_44,
   45: NumFormat.standard_45,
   46: NumFormat.standard_46,
   47: NumFormat.standard_47,

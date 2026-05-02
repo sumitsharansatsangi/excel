@@ -30,9 +30,9 @@ class _SharedStringsMaintainer {
 
   void add(SharedString val, String key) {
     _map[val]?.increaseCount();
+    _list.add(val);
     _map.putIfAbsent(val, () {
       _mapString[key] = val;
-      _list.add(val);
       return _IndexingHolder(_index++);
     });
   }
@@ -84,8 +84,21 @@ class SharedString {
   }
 
   TextSpan get textSpan {
-    bool getBool(XmlElement element) {
-      return bool.tryParse(element.getAttribute('val') ?? '') ?? true;
+    bool readOnOff(XmlElement element) {
+      final value = element.getAttribute('val')?.trim().toLowerCase();
+      return switch (value) {
+        null || '' => true,
+        '0' || 'false' || 'off' => false,
+        _ => true,
+      };
+    }
+
+    Underline readUnderline(XmlElement element) {
+      return switch (element.getAttribute('val')?.trim().toLowerCase()) {
+        'none' => Underline.None,
+        'double' || 'doubleaccounting' => Underline.Double,
+        _ => Underline.Single,
+      };
     }
 
     int getDouble(XmlElement element) {
@@ -120,17 +133,14 @@ class SharedString {
                 for (final runProperty in runChild.childElements) {
                   switch (runProperty.localName) {
                     case 'b': //18.8.2 b (Bold)
-                      style = style.copyWith(boldVal: getBool(runProperty));
+                      style = style.copyWith(boldVal: readOnOff(runProperty));
                       break;
                     case 'i': //18.8.26 i (Italic)
-                      style = style.copyWith(italicVal: getBool(runProperty));
+                      style = style.copyWith(italicVal: readOnOff(runProperty));
                       break;
                     case 'u': //18.4.13 u (Underline)
                       style = style.copyWith(
-                        underlineVal:
-                            runProperty.getAttribute('val') == 'double'
-                            ? Underline.Double
-                            : Underline.Single,
+                        underlineVal: readUnderline(runProperty),
                       );
                       break;
                     case 'sz': //18.4.11 sz (Font Size)

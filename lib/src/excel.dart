@@ -62,6 +62,12 @@ class Excel {
   Excel._(this._archive) {
     parser = Parser._(this);
     parser._startParsing();
+    // Parsing populates sheets through the same mutation APIs users call.
+    // Reset those flags so a no-op decode/encode does not rebuild workbook
+    // metadata or styles.
+    _styleChanges = false;
+    _mergeChanges = false;
+    _rtlChanges = false;
   }
 
   factory Excel.createExcel() {

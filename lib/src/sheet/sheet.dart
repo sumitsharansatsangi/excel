@@ -688,6 +688,8 @@ class Sheet {
             });
           }
         });
+      } else {
+        _data = Map<int, Map<int, Data>>.from(_sheetData);
       }
     }
     _data[rowIndex] = {0: Data.newData(this, rowIndex, 0)};
@@ -1146,8 +1148,23 @@ class Sheet {
     }
 
     cell._value = value;
-    cell._cellStyle = CellStyle(numberFormat: NumFormat.defaultFor(value));
-    if (cell._cellStyle != NumFormat.standard_0) {
+    final existingStyle = cell._cellStyle;
+    final currentFormat = existingStyle?.numberFormat;
+    final defaultFormat = NumFormat.defaultFor(value);
+    final nextFormat = switch ((value, currentFormat)) {
+      (null, final format?) when format != NumFormat.standard_0 =>
+        NumFormat.standard_0,
+      (_, null) when defaultFormat != NumFormat.standard_0 => defaultFormat,
+      (_, NumFormat.standard_0) when defaultFormat != NumFormat.standard_0 =>
+        defaultFormat,
+      (_, final format?) when !format.accepts(value) => defaultFormat,
+      _ => null,
+    };
+
+    if (nextFormat != null) {
+      cell._cellStyle = (existingStyle ?? CellStyle()).copyWith(
+        numberFormat: nextFormat,
+      );
       _excel._styleChanges = true;
     }
 

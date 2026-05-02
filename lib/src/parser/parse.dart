@@ -379,6 +379,9 @@ class Parser {
         node1.findAllElements('numFmt').forEach((node) {
           final numFmtId = int.parse(node.getAttribute('numFmtId')!);
           final formatCode = node.getAttribute('formatCode')!;
+          // Built-in numFmtIds are below 164. Some producers still emit
+          // numFmt entries for them; keep the built-in mapping instead of
+          // failing the workbook parse or overwriting a standard format.
           if (numFmtId >= 164) {
             _excel._numFormats.add(
               numFmtId,
