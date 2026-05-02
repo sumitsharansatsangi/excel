@@ -15,6 +15,7 @@ class Sheet {
   List<_Span?> _spanList = [];
   Map<int, Map<int, Data>> _sheetData = {};
   HeaderFooter? _headerFooter;
+  final List<Chart> _charts = [];
 
   ///
   /// It will clone the object by changing the `this` reference of previous oldSheetObject and putting `new this` reference, with copying the values too
@@ -33,6 +34,7 @@ class Sheet {
         columnAutoFitVal: oldSheetObject._columnAutoFit,
         isRTLVal: oldSheetObject._isRTL,
         headerFooter: oldSheetObject._headerFooter,
+        charts: oldSheetObject._charts,
       );
 
   Sheet._(
@@ -48,8 +50,12 @@ class Sheet {
     Map<int, double>? rowHeightsVal,
     Map<int, bool>? columnAutoFitVal,
     HeaderFooter? headerFooter,
+    List<Chart>? charts,
   }) {
     _headerFooter = headerFooter;
+    if (charts != null) {
+      _charts.addAll(charts);
+    }
 
     if (spanL_ != null) {
       _spanList = List<_Span?>.from(spanL_);
@@ -131,6 +137,14 @@ class Sheet {
   set isRTL(bool _u) {
     _isRTL = _u;
     _excel._rtlChangeLookup = sheetName;
+  }
+
+  /// Returns the charts attached to this sheet.
+  List<Chart> get charts => List.unmodifiable(_charts);
+
+  /// Adds a chart to this sheet.
+  void addChart(Chart chart) {
+    _charts.add(chart);
   }
 
   ///

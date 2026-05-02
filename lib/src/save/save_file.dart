@@ -650,6 +650,8 @@ class Save {
       _setRTL();
     }
 
+    _ChartManager(_excel).processCharts();
+
     for (var xmlFile in _excel._xmlFiles.keys) {
       var xml = _excel._xmlFiles[xmlFile].toString();
       var content = utf8.encode(xml);
