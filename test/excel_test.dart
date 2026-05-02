@@ -902,6 +902,37 @@ void main() {
       }
     });
 
+    test('setMergedCellStyle applies styles without borders', () {
+      final excel = Excel.createExcel();
+      final sheet = excel['Sheet1'];
+      final start = CellIndex.indexByString('A1');
+      final end = CellIndex.indexByString('B2');
+      final background = ExcelColor.fromHexString('FF00FF00');
+
+      sheet.merge(start, end);
+      sheet.setMergedCellStyle(
+        start,
+        CellStyle(backgroundColorHex: background, bold: true),
+      );
+
+      for (var row = start.rowIndex; row <= end.rowIndex; row++) {
+        for (
+          var column = start.columnIndex;
+          column <= end.columnIndex;
+          column++
+        ) {
+          final style = sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: column, rowIndex: row),
+              )
+              .cellStyle;
+          expect(style, isNotNull);
+          expect(style!.backgroundColor, background);
+          expect(style.isBold, isTrue);
+        }
+      }
+    });
+
     test('saving XLSX File with borders', () {
       final file = './test/test_resources/borders.xlsx';
       final bytes = File(file).readAsBytesSync();
@@ -1257,6 +1288,142 @@ void main() {
     // should 40 with a litle bit of tolerance.
     expect(sheetObject.getRowHeight(1), greaterThan(38));
     expect(sheetObject.getRowHeight(1), lessThan(42));
+  });
+
+  test('Parses column width ranges', () {
+    final excel = Excel.createExcel();
+    final bytes = excel.encode()!;
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final patchedArchive = Archive();
+
+    for (final file in archive.files) {
+      if (file.name == 'xl/worksheets/sheet1.xml') {
+        final doc = XmlDocument.parse(utf8.decode(file.content));
+        final worksheet = doc.rootElement;
+        final sheetData = worksheet.findElements('sheetData').first;
+        final cols = XmlElement(XmlName('cols'), [], [
+          XmlElement(XmlName('col'), [
+            XmlAttribute(XmlName('min'), '2'),
+            XmlAttribute(XmlName('max'), '4'),
+            XmlAttribute(XmlName('width'), '31.5'),
+            XmlAttribute(XmlName('customWidth'), '1'),
+          ]),
+        ]);
+        worksheet.children.insert(worksheet.children.indexOf(sheetData), cols);
+        final updated = utf8.encode(doc.toXmlString());
+        patchedArchive.addFile(ArchiveFile(file.name, updated.length, updated));
+      } else {
+        patchedArchive.addFile(
+          ArchiveFile(file.name, file.content.length, file.content),
+        );
+      }
+    }
+
+    final decoded = Excel.decodeBytes(ZipEncoder().encode(patchedArchive));
+    final sheet = decoded['Sheet1'];
+    expect(sheet.getColumnWidth(1), 31.5);
+    expect(sheet.getColumnWidth(2), 31.5);
+    expect(sheet.getColumnWidth(3), 31.5);
+  });
+
+  test('JSON conversion preserves primitive JSON types', () {
+    final excel = Excel.fromJson({
+      'S': [
+        {
+          'id': '00123',
+          'flag': true,
+          'count': 7,
+          'ratio': 2.5,
+          'formula': '=A1+B1',
+        },
+      ],
+    });
+
+    expect(
+      excel['S'].cell(CellIndex.indexByString('A1')).value,
+      TextCellValue('id'),
+    );
+    expect(
+      excel['S'].cell(CellIndex.indexByString('A2')).value,
+      TextCellValue('00123'),
+    );
+    expect(
+      excel['S'].cell(CellIndex.indexByString('B2')).value,
+      BoolCellValue(true),
+    );
+    expect(
+      excel['S'].cell(CellIndex.indexByString('C2')).value,
+      IntCellValue(7),
+    );
+    expect(
+      excel['S'].cell(CellIndex.indexByString('D2')).value,
+      DoubleCellValue(2.5),
+    );
+    expect(
+      excel['S'].cell(CellIndex.indexByString('E2')).value,
+      TextCellValue('=A1+B1'),
+    );
+    expect(excel.toJson()['S'].first['id'], '00123');
+  });
+
+  group('inlineStr parsing', () {
+    List<int> patchInlineString(
+      List<int> bytes,
+      String cellRef,
+      XmlElement inlineString,
+    ) {
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final patchedArchive = Archive();
+
+      for (final file in archive.files) {
+        if (file.name == 'xl/worksheets/sheet1.xml') {
+          final doc = XmlDocument.parse(utf8.decode(file.content));
+          final cell = doc
+              .findAllElements('c')
+              .firstWhere((element) => element.getAttribute('r') == cellRef);
+          cell.children.clear();
+          cell.attributes.removeWhere(
+            (attribute) =>
+                attribute.name.local == 't' || attribute.name.local == 's',
+          );
+          cell.attributes.add(XmlAttribute(XmlName('t'), 'inlineStr'));
+          cell.children.add(inlineString);
+          final updated = utf8.encode(doc.toXmlString());
+          patchedArchive.addFile(
+            ArchiveFile(file.name, updated.length, updated),
+          );
+        } else {
+          patchedArchive.addFile(
+            ArchiveFile(file.name, file.content.length, file.content),
+          );
+        }
+      }
+
+      return ZipEncoder().encode(patchedArchive);
+    }
+
+    test('joins multiple text runs', () {
+      final excel = Excel.createExcel();
+      excel['Sheet1'].appendRow([TextCellValue('placeholder')]);
+      final patched = patchInlineString(
+        excel.encode()!,
+        'A1',
+        XmlElement(XmlName('is'), [], [
+          XmlElement(XmlName('r'), [], [
+            XmlElement(XmlName('t'), [], [XmlText('Hello')]),
+          ]),
+          XmlElement(XmlName('r'), [], [
+            XmlElement(XmlName('t'), [], [XmlText(' inline')]),
+          ]),
+        ]),
+      );
+
+      final decoded = Excel.decodeBytes(patched);
+      expect(
+        decoded['Sheet1'].cell(CellIndex.indexByString('A1')).value,
+        TextCellValue('Hello inline'),
+      );
+    });
   });
 
   test('Decode customNumFmtIdBelow164.xlsx without throwing exception', () {

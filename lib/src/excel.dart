@@ -90,6 +90,108 @@ class Excel {
     return _newExcel(ZipDecoder().decodeStream(input));
   }
 
+  factory Excel.fromJson(Map<String, dynamic> json) {
+    final excel = Excel.createExcel();
+    final defaultSheet = excel.getDefaultSheet();
+
+    if (defaultSheet != null && json.isNotEmpty) {
+      final firstSheet = json.keys.first;
+      if (firstSheet != defaultSheet) {
+        excel.rename(defaultSheet, firstSheet);
+      }
+    }
+
+    for (final entry in json.entries) {
+      final sheet = excel[entry.key];
+      final rows = entry.value;
+      if (rows is! List || rows.isEmpty) {
+        continue;
+      }
+
+      final records = rows.whereType<Map>().toList(growable: false);
+      if (records.isEmpty) {
+        continue;
+      }
+
+      final headers = <String>[
+        for (final key in records.first.keys) key.toString(),
+      ];
+      sheet.appendRow([for (final header in headers) TextCellValue(header)]);
+
+      for (final record in records) {
+        sheet.appendRow([
+          for (final header in headers) _jsonValueToCellValue(record[header]),
+        ]);
+      }
+    }
+
+    return excel;
+  }
+
+  static CellValue? _jsonValueToCellValue(Object? value) {
+    return switch (value) {
+      null => null,
+      CellValue() => value,
+      bool() => BoolCellValue(value),
+      int() => IntCellValue(value),
+      double() => DoubleCellValue(value),
+      String() => TextCellValue(value),
+      _ => TextCellValue(value.toString()),
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      for (final sheetEntry in sheets.entries)
+        sheetEntry.key: _sheetToJson(sheetEntry.value),
+    };
+  }
+
+  List<Map<String, dynamic>> _sheetToJson(Sheet sheet) {
+    final rows = sheet.rows;
+    if (rows.isEmpty) {
+      return const [];
+    }
+
+    final headers = rows.first
+        .map((cell) => cell?.value?.toString())
+        .whereType<String>()
+        .toList(growable: false);
+    if (headers.isEmpty) {
+      return const [];
+    }
+
+    return [
+      for (final row in rows.skip(1))
+        {
+          for (var column = 0; column < headers.length; column++)
+            headers[column]: column < row.length
+                ? _cellValueToJson(row[column]?.value)
+                : null,
+        },
+    ];
+  }
+
+  Object? _cellValueToJson(CellValue? value) {
+    return switch (value) {
+      null => null,
+      IntCellValue(:final value) => value,
+      DoubleCellValue(:final value) => value,
+      BoolCellValue(:final value) => value,
+      FormulaCellValue(:final formula) => formula,
+      TextCellValue() => value.value.toString(),
+      DateCellValue() => value.toString(),
+      DateTimeCellValue() => value.toString(),
+      TimeCellValue() => value.toString(),
+      ImageCellValue() => null,
+    };
+  }
+
+  @override
+  String toString() {
+    return jsonEncode(toJson());
+  }
+
   ///
   ///It will return `tables` as map in order to mimic the previous versions reading the data.
   ///
@@ -339,8 +441,7 @@ class Excel {
   ///
   ///```
   List<int>? save({String fileName = 'FlutterExcel.xlsx'}) {
-    Save s = Save._(this, parser);
-    var onValue = s._save();
+    var onValue = encode();
     return helper.SavingHelper.saveFile(onValue, fileName);
   }
 

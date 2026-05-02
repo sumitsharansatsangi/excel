@@ -813,81 +813,101 @@ class Parser {
     var s1 = node.getAttribute('s');
     int s = 0;
     if (s1 != null) {
-      try {
-        s = int.parse(s1.toString());
-      } catch (_) {}
+      s = int.tryParse(s1) ?? 0;
 
-      String rC = node.getAttribute('r').toString();
-
-      if (_excel._cellStyleReferenced[name] == null) {
-        _excel._cellStyleReferenced[name] = {rC: s};
-      } else {
-        _excel._cellStyleReferenced[name]![rC] = s;
+      final rC = node.getAttribute('r');
+      if (rC != null) {
+        (_excel._cellStyleReferenced[name] ??= {})[rC] = s;
       }
     }
 
     CellValue? value;
+    final formulaNode = node.findElements('f').firstOrNull;
+    if (formulaNode != null) {
+      value = FormulaCellValue(_parseValue(formulaNode).toString());
+      sheetObject.updateCell(
+        CellIndex.indexByColumnRow(
+          columnIndex: columnIndex,
+          rowIndex: rowIndex,
+        ),
+        value,
+        cellStyle: _excel._cellStyleList[s],
+      );
+      return;
+    }
+
     String? type = node.getAttribute('t');
 
     switch (type) {
       // sharedString
       case 's':
-        final sharedString = _excel._sharedStrings.value(
-          int.parse(_parseValue(node.findElements('v').first)),
-        );
-        value = TextCellValue.span(sharedString!.textSpan);
+        final vNode = node.findElements('v').firstOrNull;
+        final sharedStringIndex = vNode == null
+            ? null
+            : int.tryParse(_parseValue(vNode));
+        final sharedString = sharedStringIndex == null
+            ? null
+            : _excel._sharedStrings.value(sharedStringIndex);
+        value = sharedString == null
+            ? null
+            : TextCellValue.span(sharedString.textSpan);
         break;
       // boolean
       case 'b':
-        value = BoolCellValue(_parseValue(node.findElements('v').first) == '1');
+        final vNode = node.findElements('v').firstOrNull;
+        value = BoolCellValue(vNode != null && _parseValue(vNode) == '1');
         break;
       // error
       case 'e':
+        final vNode = node.findElements('v').firstOrNull;
+        value = vNode == null ? null : TextCellValue(_parseValue(vNode));
+        break;
       // formula
       case 'str':
-        value = FormulaCellValue(_parseValue(node.findElements('v').first));
+        final vNode = node.findElements('v').firstOrNull;
+        value = vNode == null ? null : FormulaCellValue(_parseValue(vNode));
         break;
       // inline string
       case 'inlineStr':
         // <c r='B2' t='inlineStr'>
         // <is><t>Dartonico</t></is>
         // </c>
-        value = TextCellValue(_parseValue(node.findAllElements('t').first));
+        value = TextCellValue(
+          node.findAllElements('t').map(_parseValue).join(),
+        );
         break;
       // number
       case 'n':
       default:
-        var formulaNode = node.findElements('f');
-        if (formulaNode.isNotEmpty) {
-          value = FormulaCellValue(_parseValue(formulaNode.first).toString());
-        } else {
-          final vNode = node.findElements('v').firstOrNull;
-          if (vNode == null) {
-            value = null;
-          } else if (s1 != null) {
-            final v = _parseValue(vNode);
-            var numFmtId = _excel._numFmtIds[s];
-            final numFormat = _excel._numFormats.getByNumFmtId(numFmtId);
-            if (numFormat == null) {
-              assert(
-                false,
-                'found no number format spec for numFmtId $numFmtId',
-              );
-              value = NumFormat.defaultNumeric.read(v);
-            } else {
-              value = numFormat.read(v);
-            }
-          } else {
-            final v = _parseValue(vNode);
+        final vNode = node.findElements('v').firstOrNull;
+        if (vNode == null) {
+          value = null;
+        } else if (s1 != null) {
+          final v = _parseValue(vNode);
+          final numFmtId = s < _excel._numFmtIds.length
+              ? _excel._numFmtIds[s]
+              : null;
+          final numFormat = numFmtId == null
+              ? null
+              : _excel._numFormats.getByNumFmtId(numFmtId);
+          if (numFormat == null) {
+            assert(false, 'found no number format spec for numFmtId $numFmtId');
             value = NumFormat.defaultNumeric.read(v);
+          } else {
+            value = numFormat.read(v);
           }
+        } else {
+          final v = _parseValue(vNode);
+          value = NumFormat.defaultNumeric.read(v);
         }
     }
 
     sheetObject.updateCell(
       CellIndex.indexByColumnRow(columnIndex: columnIndex, rowIndex: rowIndex),
       value,
-      cellStyle: _excel._cellStyleList[s],
+      cellStyle: s < _excel._cellStyleList.length
+          ? _excel._cellStyleList[s]
+          : null,
     );
   }
 
@@ -1140,9 +1160,13 @@ class Parser {
           int? col = int.tryParse(colAttribute);
           double? width = double.tryParse(widthAttribute);
           if (col != null && width != null) {
-            col -= 1; // first col in _columnWidths is index 0
-            if (col >= 0) {
-              sheetObject._columnWidths[col] = width;
+            final maxAttribute = element.getAttribute("max");
+            final maxCol = int.tryParse(maxAttribute ?? '') ?? col;
+            for (var column = col; column <= maxCol; column++) {
+              final zeroBasedColumn = column - 1;
+              if (zeroBasedColumn >= 0) {
+                sheetObject._columnWidths[zeroBasedColumn] = width;
+              }
             }
           }
         }
