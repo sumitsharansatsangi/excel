@@ -196,6 +196,11 @@ void main() {
         DoubleCellValue(42),
         cellStyle: CellStyle(numberFormat: NumFormat.standard_11),
       );
+      sheet.updateCell(
+        CellIndex.indexByString('B9'),
+        TextCellValue('Text-formatted value'),
+        cellStyle: CellStyle(numberFormat: NumFormat.standard_49),
+      );
 
       final b10 = sheet.cell(CellIndex.indexByString('B10'));
       b10.cellStyle = (b10.cellStyle ?? CellStyle()).copyWith(
@@ -236,6 +241,10 @@ void main() {
       final b8 = sheet.cell(CellIndex.indexByString('B8'));
       expect(b8.value, equals(IntCellValue(42)));
       expect(b8.cellStyle?.numberFormat, equals(NumFormat.standard_11));
+
+      final b9 = sheet.cell(CellIndex.indexByString('B9'));
+      expect(b9.value, equals(TextCellValue('Text-formatted value')));
+      expect(b9.cellStyle?.numberFormat, equals(NumFormat.standard_49));
 
       final b10 = sheet.cell(CellIndex.indexByString('B10'));
       expect(b10.value, equals(DoubleCellValue(15.99)));
