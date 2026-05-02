@@ -230,6 +230,7 @@ class Save {
       _FontStyle _fs = _FontStyle(
         bold: cellStyle.isBold,
         italic: cellStyle.isItalic,
+        strikethrough: cellStyle.isStrikethrough,
         fontColorHex: cellStyle.fontColor,
         underline: cellStyle.underline,
         fontSize: cellStyle.fontSize,
@@ -292,6 +293,10 @@ class Save {
 
           /// putting italic
           if (fontStyleElement.isItalic) XmlElement(XmlName('i'), [], []),
+
+          /// putting strikethrough
+          if (fontStyleElement.isStrikethrough)
+            XmlElement(XmlName('strike'), [], []),
 
           /// putting single underline
           if (fontStyleElement.underline != Underline.None &&
@@ -476,6 +481,7 @@ class Save {
       _FontStyle _fs = _FontStyle(
         bold: cellStyle.isBold,
         italic: cellStyle.isItalic,
+        strikethrough: cellStyle.isStrikethrough,
         fontColorHex: cellStyle.fontColor,
         underline: cellStyle.underline,
         fontSize: cellStyle.fontSize,

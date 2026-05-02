@@ -12,6 +12,7 @@ class CellStyle extends Equatable {
   TextWrapping? _textWrapping;
   bool _bold = false, _italic = false;
   Underline _underline = Underline.None;
+  bool _strikethrough = false;
   int? _fontSize;
   int _rotation = 0;
   Border _leftBorder;
@@ -35,6 +36,7 @@ class CellStyle extends Equatable {
     bool bold = false,
     Underline underline = Underline.None,
     bool italic = false,
+    bool strikethrough = false,
     int rotation = 0,
     Border? leftBorder,
     Border? rightBorder,
@@ -49,6 +51,7 @@ class CellStyle extends Equatable {
        _fontSize = fontSize,
        _italic = italic,
        _underline = underline,
+       _strikethrough = strikethrough,
        _fontFamily = fontFamily,
        _fontScheme = fontScheme ?? FontScheme.Unset,
        _rotation = rotation,
@@ -75,6 +78,7 @@ class CellStyle extends Equatable {
     bool? boldVal,
     bool? italicVal,
     Underline? underlineVal,
+    bool? strikethroughVal,
     int? fontSizeVal,
     int? rotationVal,
     Border? leftBorderVal,
@@ -98,6 +102,7 @@ class CellStyle extends Equatable {
       bold: boldVal ?? this._bold,
       italic: italicVal ?? this._italic,
       underline: underlineVal ?? this._underline,
+      strikethrough: strikethroughVal ?? this._strikethrough,
       fontSize: fontSizeVal ?? this._fontSize,
       rotation: rotationVal ?? this._rotation,
       leftBorder: leftBorderVal ?? this._leftBorder,
@@ -263,6 +268,18 @@ class CellStyle extends Equatable {
     _italic = italic;
   }
 
+  ///Get `Strikethrough`
+  ///
+  bool get isStrikethrough {
+    return _strikethrough;
+  }
+
+  ///Set `Strikethrough`
+  ///
+  set isStrikethrough(bool strikethrough) {
+    _strikethrough = strikethrough;
+  }
+
   ///Get `LeftBorder`
   ///
   Border get leftBorder {
@@ -353,6 +370,7 @@ class CellStyle extends Equatable {
     _rotation,
     _italic,
     _underline,
+    _strikethrough,
     _fontSize,
     _fontFamily,
     _fontScheme,

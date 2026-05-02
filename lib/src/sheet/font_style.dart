@@ -7,6 +7,7 @@ class _FontStyle extends Equatable {
   String? _fontFamily;
   FontScheme _fontScheme = FontScheme.Unset;
   bool _bold = false, _italic = false;
+  bool _strikethrough = false;
   Underline _underline = Underline.None;
   int? _fontSize;
 
@@ -18,12 +19,15 @@ class _FontStyle extends Equatable {
     bool bold = false,
     Underline underline = Underline.None,
     bool italic = false,
+    bool strikethrough = false,
   }) {
     _bold = bold;
 
     _fontSize = fontSize;
 
     _italic = italic;
+
+    _strikethrough = strikethrough;
 
     _fontFamily = fontFamily;
 
@@ -114,10 +118,21 @@ class _FontStyle extends Equatable {
     _italic = italic;
   }
 
+  /// Get `Strikethrough`
+  bool get isStrikethrough {
+    return _strikethrough;
+  }
+
+  /// Set `Strikethrough`
+  set isStrikethrough(bool strikethrough) {
+    _strikethrough = strikethrough;
+  }
+
   @override
   List<Object?> get props => [
     _bold,
     _italic,
+    _strikethrough,
     _fontSize,
     _underline,
     _fontFamily,

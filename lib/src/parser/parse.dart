@@ -403,7 +403,7 @@ class Parser {
           _BorderSet? borderSet;
 
           int fontSize = 12;
-          bool isBold = false, isItalic = false;
+          bool isBold = false, isItalic = false, isStrikethrough = false;
           Underline underline = Underline.None;
           HorizontalAlign horizontalAlign = HorizontalAlign.Left;
           VerticalAlign verticalAlign = VerticalAlign.Bottom;
@@ -440,6 +440,12 @@ class Parser {
               isItalic = true;
             }
 
+            /// Checking for strikethrough
+            var _strike = _nodeChildren(font, 'strike');
+            if (_strike != null && _strike is bool && _strike) {
+              isStrikethrough = true;
+            }
+
             /// Checking for double underline
             var _underline = _nodeChildren(font, 'u', attribute: 'val');
             if (_underline != null) {
@@ -468,6 +474,7 @@ class Parser {
 
             _fontStyle.isBold = isBold;
             _fontStyle.isItalic = isItalic;
+            _fontStyle.isStrikethrough = isStrikethrough;
             _fontStyle.fontSize = fontSize;
             _fontStyle.fontFamily = fontFamily;
             _fontStyle.fontScheme = fontScheme;
@@ -534,6 +541,7 @@ class Parser {
             fontSize: fontSize,
             bold: isBold,
             italic: isItalic,
+            strikethrough: isStrikethrough,
             underline: underline,
             backgroundColorHex:
                 backgroundColor == 'none' || backgroundColor.isEmpty

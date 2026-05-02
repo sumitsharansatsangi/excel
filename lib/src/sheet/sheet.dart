@@ -351,14 +351,60 @@ class Sheet {
     _maxRows = maximumRowIndex + 1;
   }
 
+  void _markMergeChangedIf(bool changed) {
+    if (!changed) return;
+    _cleanUpSpanMap();
+    _excel._mergeChanges = true;
+    _excel._mergeChangeLookup = sheetName;
+  }
+
+  void _shiftColumnMetadataForInsert(int columnIndex) {
+    _columnWidths = {
+      for (final entry in _columnWidths.entries)
+        entry.key >= columnIndex ? entry.key + 1 : entry.key: entry.value,
+    };
+    _columnAutoFit = {
+      for (final entry in _columnAutoFit.entries)
+        entry.key >= columnIndex ? entry.key + 1 : entry.key: entry.value,
+    };
+  }
+
+  void _shiftColumnMetadataForRemove(int columnIndex) {
+    _columnWidths = {
+      for (final entry in _columnWidths.entries)
+        if (entry.key != columnIndex)
+          entry.key > columnIndex ? entry.key - 1 : entry.key: entry.value,
+    };
+    _columnAutoFit = {
+      for (final entry in _columnAutoFit.entries)
+        if (entry.key != columnIndex)
+          entry.key > columnIndex ? entry.key - 1 : entry.key: entry.value,
+    };
+  }
+
+  void _shiftRowMetadataForInsert(int rowIndex) {
+    _rowHeights = {
+      for (final entry in _rowHeights.entries)
+        entry.key >= rowIndex ? entry.key + 1 : entry.key: entry.value,
+    };
+  }
+
+  void _shiftRowMetadataForRemove(int rowIndex) {
+    _rowHeights = {
+      for (final entry in _rowHeights.entries)
+        if (entry.key != rowIndex)
+          entry.key > rowIndex ? entry.key - 1 : entry.key: entry.value,
+    };
+  }
+
   ///
   /// If `sheet` exists and `columnIndex < maxColumns` then it removes column at index = `columnIndex`
   ///
   void removeColumn(int columnIndex) {
-    _checkMaxColumn(columnIndex);
     if (columnIndex < 0 || columnIndex >= maxColumns) {
       return;
     }
+    _checkMaxColumn(columnIndex);
 
     bool updateSpanCell = false;
 
@@ -369,76 +415,52 @@ class Sheet {
       if (spanObj == null) {
         continue;
       }
-      int startColumn = spanObj.columnSpanStart,
-          startRow = spanObj.rowSpanStart,
-          endColumn = spanObj.columnSpanEnd,
-          endRow = spanObj.rowSpanEnd;
 
-      if (columnIndex <= endColumn) {
-        if (columnIndex < startColumn) {
-          startColumn -= 1;
-        }
-        endColumn -= 1;
-        if ( /* startColumn >= endColumn */ (columnIndex == (endColumn + 1)) &&
-            (columnIndex ==
-                (columnIndex < startColumn ? startColumn + 1 : startColumn))) {
+      if (columnIndex < spanObj.columnSpanStart) {
+        _spanList[i] = _Span(
+          rowSpanStart: spanObj.rowSpanStart,
+          columnSpanStart: spanObj.columnSpanStart - 1,
+          rowSpanEnd: spanObj.rowSpanEnd,
+          columnSpanEnd: spanObj.columnSpanEnd - 1,
+        );
+        updateSpanCell = true;
+      } else if (columnIndex <= spanObj.columnSpanEnd) {
+        if (spanObj.columnSpanStart == spanObj.columnSpanEnd) {
           _spanList[i] = null;
         } else {
-          _Span newSpanObj = _Span(
-            rowSpanStart: startRow,
-            columnSpanStart: startColumn,
-            rowSpanEnd: endRow,
-            columnSpanEnd: endColumn,
+          _spanList[i] = _Span(
+            rowSpanStart: spanObj.rowSpanStart,
+            columnSpanStart: spanObj.columnSpanStart,
+            rowSpanEnd: spanObj.rowSpanEnd,
+            columnSpanEnd: spanObj.columnSpanEnd - 1,
           );
-          _spanList[i] = newSpanObj;
         }
         updateSpanCell = true;
-        _excel._mergeChanges = true;
-      }
-
-      if (_spanList[i] != null) {
-        String rc = getSpanCellId(startColumn, startRow, endColumn, endRow);
-        if (!_spannedItems.contains(rc)) {
-          _spannedItems.add(rc);
-        }
       }
     }
-    _cleanUpSpanMap();
+    _markMergeChangedIf(updateSpanCell);
 
-    if (updateSpanCell) {
-      _excel._mergeChangeLookup = sheetName;
+    for (final rowKey in _sheetData.keys.toList()) {
+      final sourceRow = _sheetData[rowKey]!;
+      final shiftedRow = <int, Data>{};
+      for (final columnKey in (sourceRow.keys.toList()..sort())) {
+        if (columnKey == columnIndex) continue;
+        final newColumnKey = columnKey > columnIndex
+            ? columnKey - 1
+            : columnKey;
+        final data = sourceRow[columnKey]!;
+        data._columnIndex = newColumnKey;
+        shiftedRow[newColumnKey] = data;
+      }
+      if (shiftedRow.isEmpty) {
+        _sheetData.remove(rowKey);
+      } else {
+        _sheetData[rowKey] = shiftedRow;
+      }
     }
 
-    Map<int, Map<int, Data>> _data = Map<int, Map<int, Data>>();
-    if (columnIndex <= maxColumns - 1) {
-      /// do the shifting task
-      List<int> sortedKeys = _sheetData.keys.toList()..sort();
-      sortedKeys.forEach((rowKey) {
-        Map<int, Data> columnMap = Map<int, Data>();
-        List<int> sortedColumnKeys = _sheetData[rowKey]!.keys.toList()..sort();
-        sortedColumnKeys.forEach((columnKey) {
-          if (_sheetData[rowKey] != null &&
-              _sheetData[rowKey]![columnKey] != null) {
-            if (columnKey < columnIndex) {
-              columnMap[columnKey] = _sheetData[rowKey]![columnKey]!;
-            }
-            if (columnIndex == columnKey) {
-              _sheetData[rowKey]!.remove(columnKey);
-            }
-            if (columnIndex < columnKey) {
-              columnMap[columnKey - 1] = _sheetData[rowKey]![columnKey]!;
-              _sheetData[rowKey]!.remove(columnKey);
-            }
-          }
-        });
-        _data[rowKey] = Map<int, Data>.from(columnMap);
-      });
-      _sheetData = Map<int, Map<int, Data>>.from(_data);
-    }
-
-    if (_maxColumns - 1 <= columnIndex) {
-      _maxColumns -= 1;
-    }
+    _shiftColumnMetadataForRemove(columnIndex);
+    _countRowsAndColumns();
   }
 
   ///
@@ -462,88 +484,43 @@ class Sheet {
       if (spanObj == null) {
         continue;
       }
-      int startColumn = spanObj.columnSpanStart,
-          startRow = spanObj.rowSpanStart,
-          endColumn = spanObj.columnSpanEnd,
-          endRow = spanObj.rowSpanEnd;
 
-      if (columnIndex <= endColumn) {
-        if (columnIndex <= startColumn) {
-          startColumn += 1;
-        }
-        endColumn += 1;
-        _Span newSpanObj = _Span(
-          rowSpanStart: startRow,
-          columnSpanStart: startColumn,
-          rowSpanEnd: endRow,
-          columnSpanEnd: endColumn,
+      if (columnIndex <= spanObj.columnSpanStart) {
+        _spanList[i] = _Span(
+          rowSpanStart: spanObj.rowSpanStart,
+          columnSpanStart: spanObj.columnSpanStart + 1,
+          rowSpanEnd: spanObj.rowSpanEnd,
+          columnSpanEnd: spanObj.columnSpanEnd + 1,
         );
-        _spanList[i] = newSpanObj;
         updateSpanCell = true;
-        _excel._mergeChanges = true;
-      }
-      String rc = getSpanCellId(startColumn, startRow, endColumn, endRow);
-      if (!_spannedItems.contains(rc)) {
-        _spannedItems.add(rc);
-      }
-    }
-
-    if (updateSpanCell) {
-      _excel._mergeChangeLookup = sheetName;
-    }
-
-    if (_sheetData.isNotEmpty) {
-      final Map<int, Map<int, Data>> _data = Map<int, Map<int, Data>>();
-      final List<int> sortedKeys = _sheetData.keys.toList()..sort();
-      if (columnIndex <= maxColumns - 1) {
-        /// do the shifting task
-        sortedKeys.forEach((rowKey) {
-          final Map<int, Data> columnMap = Map<int, Data>();
-
-          /// getting the column keys in descending order so as to shifting becomes easy
-          final List<int> sortedColumnKeys = _sheetData[rowKey]!.keys.toList()
-            ..sort((a, b) {
-              return b.compareTo(a);
-            });
-          sortedColumnKeys.forEach((columnKey) {
-            if (_sheetData[rowKey] != null &&
-                _sheetData[rowKey]![columnKey] != null) {
-              if (columnKey < columnIndex) {
-                columnMap[columnKey] = _sheetData[rowKey]![columnKey]!;
-              }
-              if (columnIndex <= columnKey) {
-                columnMap[columnKey + 1] = _sheetData[rowKey]![columnKey]!;
-              }
-            }
-          });
-          columnMap[columnIndex] = Data.newData(this, rowKey, columnIndex);
-          _data[rowKey] = Map<int, Data>.from(columnMap);
-        });
-        _sheetData = Map<int, Map<int, Data>>.from(_data);
-      } else {
-        /// just put the data in the very first available row and
-        /// in the desired Column index only one time as we will be using less space on internal implementatoin
-        /// and mock the user as if the 2-D list is being saved
-        ///
-        /// As when user calls DataObject.cells then we will output 2-D list - pretending.
-        _sheetData[sortedKeys.first]![columnIndex] = Data.newData(
-          this,
-          sortedKeys.first,
-          columnIndex,
+      } else if (columnIndex <= spanObj.columnSpanEnd) {
+        _spanList[i] = _Span(
+          rowSpanStart: spanObj.rowSpanStart,
+          columnSpanStart: spanObj.columnSpanStart,
+          rowSpanEnd: spanObj.rowSpanEnd,
+          columnSpanEnd: spanObj.columnSpanEnd + 1,
         );
+        updateSpanCell = true;
       }
-    } else {
-      /// here simply just take the first row and put the columnIndex as the _sheetData was previously null
-      _sheetData = Map<int, Map<int, Data>>();
-      _sheetData[0] = {columnIndex: Data.newData(this, 0, columnIndex)};
     }
-    if (_maxColumns - 1 <= columnIndex) {
-      _maxColumns += 1;
-    } else {
-      _maxColumns = columnIndex + 1;
+    _markMergeChangedIf(updateSpanCell);
+
+    for (final rowKey in _sheetData.keys.toList()) {
+      final sourceRow = _sheetData[rowKey]!;
+      final shiftedRow = <int, Data>{};
+      for (final columnKey in (sourceRow.keys.toList()..sort())) {
+        final newColumnKey = columnKey >= columnIndex
+            ? columnKey + 1
+            : columnKey;
+        final data = sourceRow[columnKey]!;
+        data._columnIndex = newColumnKey;
+        shiftedRow[newColumnKey] = data;
+      }
+      _sheetData[rowKey] = shiftedRow;
     }
 
-    //_countRowsAndColumns();
+    _shiftColumnMetadataForInsert(columnIndex);
+    _countRowsAndColumns();
   }
 
   ///
@@ -562,73 +539,47 @@ class Sheet {
       if (spanObj == null) {
         continue;
       }
-      int startColumn = spanObj.columnSpanStart,
-          startRow = spanObj.rowSpanStart,
-          endColumn = spanObj.columnSpanEnd,
-          endRow = spanObj.rowSpanEnd;
 
-      if (rowIndex <= endRow) {
-        if (rowIndex < startRow) {
-          startRow -= 1;
-        }
-        endRow -= 1;
-        if ( /* startRow >= endRow */ (rowIndex == (endRow + 1)) &&
-            (rowIndex == (rowIndex < startRow ? startRow + 1 : startRow))) {
+      if (rowIndex < spanObj.rowSpanStart) {
+        _spanList[i] = _Span(
+          rowSpanStart: spanObj.rowSpanStart - 1,
+          columnSpanStart: spanObj.columnSpanStart,
+          rowSpanEnd: spanObj.rowSpanEnd - 1,
+          columnSpanEnd: spanObj.columnSpanEnd,
+        );
+        updateSpanCell = true;
+      } else if (rowIndex <= spanObj.rowSpanEnd) {
+        if (spanObj.rowSpanStart == spanObj.rowSpanEnd) {
           _spanList[i] = null;
         } else {
-          final _Span newSpanObj = _Span(
-            rowSpanStart: startRow,
-            columnSpanStart: startColumn,
-            rowSpanEnd: endRow,
-            columnSpanEnd: endColumn,
+          _spanList[i] = _Span(
+            rowSpanStart: spanObj.rowSpanStart,
+            columnSpanStart: spanObj.columnSpanStart,
+            rowSpanEnd: spanObj.rowSpanEnd - 1,
+            columnSpanEnd: spanObj.columnSpanEnd,
           );
-          _spanList[i] = newSpanObj;
         }
         updateSpanCell = true;
-        _excel._mergeChanges = true;
       }
-      if (_spanList[i] != null) {
-        final String rc = getSpanCellId(
-          startColumn,
-          startRow,
-          endColumn,
-          endRow,
-        );
-        if (!_spannedItems.contains(rc)) {
-          _spannedItems.add(rc);
+    }
+    _markMergeChangedIf(updateSpanCell);
+
+    _sheetData.remove(rowIndex);
+    final shiftedData = <int, Map<int, Data>>{};
+    for (final rowKey in (_sheetData.keys.toList()..sort())) {
+      final newRowKey = rowKey > rowIndex ? rowKey - 1 : rowKey;
+      final row = _sheetData[rowKey]!;
+      if (rowKey > rowIndex) {
+        for (final data in row.values) {
+          data._rowIndex = newRowKey;
         }
       }
+      shiftedData[newRowKey] = row;
     }
-    _cleanUpSpanMap();
+    _sheetData = shiftedData;
 
-    if (updateSpanCell) {
-      _excel._mergeChangeLookup = sheetName;
-    }
-
-    if (_sheetData.isNotEmpty) {
-      final Map<int, Map<int, Data>> _data = Map<int, Map<int, Data>>();
-      if (rowIndex <= maxRows - 1) {
-        /// do the shifting task
-        final List<int> sortedKeys = _sheetData.keys.toList()..sort();
-        sortedKeys.forEach((rowKey) {
-          if (rowKey < rowIndex && _sheetData[rowKey] != null) {
-            _data[rowKey] = Map<int, Data>.from(_sheetData[rowKey]!);
-          }
-          if (rowIndex < rowKey && _sheetData[rowKey] != null) {
-            _data[rowKey - 1] = Map<int, Data>.from(_sheetData[rowKey]!);
-          }
-        });
-        _sheetData = Map<int, Map<int, Data>>.from(_data);
-      }
-      //_countRowsAndColumns();
-    } else {
-      _maxRows = 0;
-      _maxColumns = 0;
-    }
-
-    if (_maxRows - 1 <= rowIndex) {
-      _maxRows -= 1;
-    }
+    _shiftRowMetadataForRemove(rowIndex);
+    _countRowsAndColumns();
   }
 
   ///
@@ -653,69 +604,42 @@ class Sheet {
       if (spanObj == null) {
         continue;
       }
-      int startColumn = spanObj.columnSpanStart,
-          startRow = spanObj.rowSpanStart,
-          endColumn = spanObj.columnSpanEnd,
-          endRow = spanObj.rowSpanEnd;
 
-      if (rowIndex <= endRow) {
-        if (rowIndex <= startRow) {
-          startRow += 1;
-        }
-        endRow += 1;
-        final _Span newSpanObj = _Span(
-          rowSpanStart: startRow,
-          columnSpanStart: startColumn,
-          rowSpanEnd: endRow,
-          columnSpanEnd: endColumn,
+      if (rowIndex <= spanObj.rowSpanStart) {
+        _spanList[i] = _Span(
+          rowSpanStart: spanObj.rowSpanStart + 1,
+          columnSpanStart: spanObj.columnSpanStart,
+          rowSpanEnd: spanObj.rowSpanEnd + 1,
+          columnSpanEnd: spanObj.columnSpanEnd,
         );
-        _spanList[i] = newSpanObj;
         updateSpanCell = true;
-        _excel._mergeChanges = true;
-      }
-      String rc = getSpanCellId(startColumn, startRow, endColumn, endRow);
-      if (!_spannedItems.contains(rc)) {
-        _spannedItems.add(rc);
-      }
-    }
-
-    if (updateSpanCell) {
-      _excel._mergeChangeLookup = sheetName;
-    }
-
-    Map<int, Map<int, Data>> _data = Map<int, Map<int, Data>>();
-    if (_sheetData.isNotEmpty) {
-      List<int> sortedKeys = _sheetData.keys.toList()
-        ..sort((a, b) {
-          return b.compareTo(a);
-        });
-      if (rowIndex <= maxRows - 1) {
-        /// do the shifting task
-        sortedKeys.forEach((rowKey) {
-          if (rowKey < rowIndex) {
-            _data[rowKey] = _sheetData[rowKey]!;
-          }
-          if (rowIndex <= rowKey) {
-            _data[rowKey + 1] = _sheetData[rowKey]!;
-            _data[rowKey + 1]!.forEach((key, value) {
-              value._rowIndex++;
-            });
-          }
-        });
-      } else {
-        _data = Map<int, Map<int, Data>>.from(_sheetData);
+      } else if (rowIndex <= spanObj.rowSpanEnd) {
+        _spanList[i] = _Span(
+          rowSpanStart: spanObj.rowSpanStart,
+          columnSpanStart: spanObj.columnSpanStart,
+          rowSpanEnd: spanObj.rowSpanEnd + 1,
+          columnSpanEnd: spanObj.columnSpanEnd,
+        );
+        updateSpanCell = true;
       }
     }
-    _data[rowIndex] = {0: Data.newData(this, rowIndex, 0)};
-    _sheetData = Map<int, Map<int, Data>>.from(_data);
+    _markMergeChangedIf(updateSpanCell);
 
-    if (_maxRows - 1 <= rowIndex) {
-      _maxRows = rowIndex + 1;
-    } else {
-      _maxRows += 1;
+    final shiftedData = <int, Map<int, Data>>{};
+    for (final rowKey in (_sheetData.keys.toList()..sort())) {
+      final newRowKey = rowKey >= rowIndex ? rowKey + 1 : rowKey;
+      final row = _sheetData[rowKey]!;
+      if (rowKey >= rowIndex) {
+        for (final data in row.values) {
+          data._rowIndex = newRowKey;
+        }
+      }
+      shiftedData[newRowKey] = row;
     }
+    _sheetData = shiftedData;
 
-    //_countRowsAndColumns();
+    _shiftRowMetadataForInsert(rowIndex);
+    _countRowsAndColumns();
   }
 
   ///

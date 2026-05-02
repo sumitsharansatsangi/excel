@@ -1012,7 +1012,7 @@ void main() {
     <t>off</t>
   </r>
   <r>
-    <rPr><b/><i val="1"/><u val="double"/></rPr>
+    <rPr><b/><i val="1"/><strike/><u val="double"/></rPr>
     <t>on</t>
   </r>
 </si>
@@ -1025,6 +1025,7 @@ void main() {
       expect(spans[0].style!.underline, Underline.None);
       expect(spans[1].style!.isBold, isTrue);
       expect(spans[1].style!.isItalic, isTrue);
+      expect(spans[1].style!.isStrikethrough, isTrue);
       expect(spans[1].style!.underline, Underline.Double);
     });
   });
@@ -1532,5 +1533,96 @@ void main() {
         equals(beforeStyle.backgroundColor),
       );
     });
+
+    test('writes and reads strikethrough font styles', () {
+      final excel = Excel.createExcel();
+      final sheet = excel['Sheet1'];
+
+      sheet.updateCell(
+        CellIndex.indexByString('A1'),
+        TextCellValue('done'),
+        cellStyle: CellStyle(strikethrough: true),
+      );
+
+      final reloaded = Excel.decodeBytes(excel.encode()!);
+      expect(
+        reloaded['Sheet1']
+            .cell(CellIndex.indexByString('A1'))
+            .cellStyle
+            ?.isStrikethrough,
+        isTrue,
+      );
+    });
+  });
+
+  group('Sheet row and column mutations', () {
+    test('insert and remove columns keep cell indexes and widths aligned', () {
+      final excel = Excel.createExcel();
+      final sheet = excel['Sheet1'];
+
+      sheet.updateCell(CellIndex.indexByString('A1'), TextCellValue('A'));
+      sheet.updateCell(CellIndex.indexByString('B1'), TextCellValue('B'));
+      sheet.setColumnWidth(1, 24);
+
+      sheet.insertColumn(1);
+
+      expect(
+        sheet.cell(CellIndex.indexByString('C1')).value,
+        TextCellValue('B'),
+      );
+      expect(
+        sheet.cell(CellIndex.indexByString('C1')).cellIndex.columnIndex,
+        2,
+      );
+      expect(sheet.getColumnWidth(2), 24);
+
+      sheet.removeColumn(0);
+
+      expect(
+        sheet.cell(CellIndex.indexByString('B1')).value,
+        TextCellValue('B'),
+      );
+      expect(
+        sheet.cell(CellIndex.indexByString('B1')).cellIndex.columnIndex,
+        1,
+      );
+      expect(sheet.getColumnWidth(1), 24);
+    });
+
+    test(
+      'insert and remove rows keep cell indexes, heights, and merges aligned',
+      () {
+        final excel = Excel.createExcel();
+        final sheet = excel['Sheet1'];
+
+        sheet.updateCell(CellIndex.indexByString('A1'), TextCellValue('A'));
+        sheet.updateCell(CellIndex.indexByString('A2'), TextCellValue('B'));
+        sheet.setRowHeight(1, 30);
+        sheet.merge(
+          CellIndex.indexByString('B2'),
+          CellIndex.indexByString('C2'),
+        );
+
+        sheet.insertRow(1);
+
+        expect(
+          sheet.cell(CellIndex.indexByString('A3')).value,
+          TextCellValue('B'),
+        );
+        expect(sheet.cell(CellIndex.indexByString('A3')).cellIndex.rowIndex, 2);
+        expect(sheet.getRowHeight(2), 30);
+        expect(sheet.spannedItems, contains('B3:C3'));
+
+        sheet.removeRow(0);
+
+        expect(
+          sheet.cell(CellIndex.indexByString('A2')).value,
+          TextCellValue('B'),
+        );
+        expect(sheet.cell(CellIndex.indexByString('A2')).cellIndex.rowIndex, 1);
+        expect(sheet.getRowHeight(1), 30);
+        expect(sheet.spannedItems, contains('B2:C2'));
+      },
+    );
   });
 }

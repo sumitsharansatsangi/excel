@@ -138,6 +138,11 @@ class SharedString {
                     case 'i': //18.8.26 i (Italic)
                       style = style.copyWith(italicVal: readOnOff(runProperty));
                       break;
+                    case 'strike': //18.8.40 strike (Strike Through)
+                      style = style.copyWith(
+                        strikethroughVal: readOnOff(runProperty),
+                      );
+                      break;
                     case 'u': //18.4.13 u (Underline)
                       style = style.copyWith(
                         underlineVal: readUnderline(runProperty),
