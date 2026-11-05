@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 // A helper class to optimized the usage of Maps
 class FastList<K> {

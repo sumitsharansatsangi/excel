@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+
 import 'package:archive/archive.dart';
 import 'package:excel/excel.dart';
 import 'package:test/test.dart';
@@ -558,69 +559,64 @@ void main() {
     );
   });
 
-  test(
-    'Add already shared strings and make sure that they are reused by checking increased usage count but equal unique count',
-    () {
-      var file = './test/test_resources/example.xlsx';
-      var bytes = File(file).readAsBytesSync();
-      var archive = ZipDecoder().decodeBytes(bytes);
-      var sharedStringsArchive = archive.findFile('xl/sharedStrings.xml')!;
+  test('Add already shared strings and make sure that they are reused by checking increased usage count but equal unique count', () {
+    var file = './test/test_resources/example.xlsx';
+    var bytes = File(file).readAsBytesSync();
+    var archive = ZipDecoder().decodeBytes(bytes);
+    var sharedStringsArchive = archive.findFile('xl/sharedStrings.xml')!;
 
-      var oldSharedStringsDocument = XmlDocument.parse(
-        utf8.decode(sharedStringsArchive.content),
-      );
-      var oldCount = oldSharedStringsDocument
-          .findAllElements('sst')
-          .first
-          .getAttributeNode("count");
-      var oldUniqueCount = oldSharedStringsDocument
-          .findAllElements('sst')
-          .first
-          .getAttributeNode("uniqueCount");
+    var oldSharedStringsDocument = XmlDocument.parse(
+      utf8.decode(sharedStringsArchive.content),
+    );
+    var oldCount = oldSharedStringsDocument
+        .findAllElements('sst')
+        .first
+        .getAttributeNode("count");
+    var oldUniqueCount = oldSharedStringsDocument
+        .findAllElements('sst')
+        .first
+        .getAttributeNode("uniqueCount");
 
-      var excel = Excel.decodeBytes(bytes);
+    var excel = Excel.decodeBytes(bytes);
 
-      Sheet? sheetObject = excel.tables['Sheet1']!;
-      sheetObject.insertRowIterables([
-        TextCellValue('ISRAEL'),
-        TextCellValue('Jerusalem'),
-        TextCellValue('Benjamin Netanyahu'),
-      ], 4);
-      var fileBytes = excel.encode();
-      if (fileBytes != null) {
-        File(Directory.current.path + '/tmp/exampleOut.xlsx')
-          ..createSync(recursive: true)
-          ..writeAsBytesSync(fileBytes);
-      }
-      var newFile = './tmp/exampleOut.xlsx';
-      var newFileBytes = File(newFile).readAsBytesSync();
-      expect(() => Excel.decodeBytes(newFileBytes), returnsNormally);
+    Sheet? sheetObject = excel.tables['Sheet1']!;
+    sheetObject.insertRowIterables([
+      TextCellValue('ISRAEL'),
+      TextCellValue('Jerusalem'),
+      TextCellValue('Benjamin Netanyahu'),
+    ], 4);
+    var fileBytes = excel.encode();
+    if (fileBytes != null) {
+      File(Directory.current.path + '/tmp/exampleOut.xlsx')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+    }
+    var newFile = './tmp/exampleOut.xlsx';
+    var newFileBytes = File(newFile).readAsBytesSync();
+    expect(() => Excel.decodeBytes(newFileBytes), returnsNormally);
 
-      var newArchive = ZipDecoder().decodeBytes(newFileBytes);
-      var newSharedStringsArchive = newArchive.findFile(
-        'xl/sharedStrings.xml',
-      )!;
+    var newArchive = ZipDecoder().decodeBytes(newFileBytes);
+    var newSharedStringsArchive = newArchive.findFile('xl/sharedStrings.xml')!;
 
-      var newSharedStringsDocument = XmlDocument.parse(
-        utf8.decode(newSharedStringsArchive.content),
-      );
-      var newCount = newSharedStringsDocument
-          .findAllElements('sst')
-          .first
-          .getAttributeNode("count");
-      var newUniqueCount = newSharedStringsDocument
-          .findAllElements('sst')
-          .first
-          .getAttributeNode("uniqueCount");
+    var newSharedStringsDocument = XmlDocument.parse(
+      utf8.decode(newSharedStringsArchive.content),
+    );
+    var newCount = newSharedStringsDocument
+        .findAllElements('sst')
+        .first
+        .getAttributeNode("count");
+    var newUniqueCount = newSharedStringsDocument
+        .findAllElements('sst')
+        .first
+        .getAttributeNode("uniqueCount");
 
-      // delete tmp folder
-      new Directory('./tmp').delete(recursive: true);
+    // delete tmp folder
+    new Directory('./tmp').delete(recursive: true);
 
-      expect(oldUniqueCount!.value, equals(newUniqueCount!.value));
-      expect(oldCount!.value, "12");
-      expect(newCount!.value, "15");
-    },
-  );
+    expect(oldUniqueCount!.value, equals(newUniqueCount!.value));
+    expect(oldCount!.value, "12");
+    expect(newCount!.value, "15");
+  });
 
   test('Saving shared strings escapes XML characters', () {
     final excel = Excel.createExcel();
@@ -1316,12 +1312,12 @@ void main() {
         final doc = XmlDocument.parse(utf8.decode(file.content));
         final worksheet = doc.rootElement;
         final sheetData = worksheet.findElements('sheetData').first;
-        final cols = XmlElement(XmlName('cols'), [], [
-          XmlElement(XmlName('col'), [
-            XmlAttribute(XmlName('min'), '2'),
-            XmlAttribute(XmlName('max'), '4'),
-            XmlAttribute(XmlName('width'), '31.5'),
-            XmlAttribute(XmlName('customWidth'), '1'),
+        final cols = XmlElement(XmlName.parts('cols'), [], [
+          XmlElement(XmlName.parts('col'), [
+            XmlAttribute(XmlName.parts('min'), '2'),
+            XmlAttribute(XmlName.parts('max'), '4'),
+            XmlAttribute(XmlName.parts('width'), '31.5'),
+            XmlAttribute(XmlName.parts('customWidth'), '1'),
           ]),
         ]);
         worksheet.children.insert(worksheet.children.indexOf(sheetData), cols);
@@ -1401,7 +1397,7 @@ void main() {
             (attribute) =>
                 attribute.name.local == 't' || attribute.name.local == 's',
           );
-          cell.attributes.add(XmlAttribute(XmlName('t'), 'inlineStr'));
+          cell.attributes.add(XmlAttribute(XmlName.parts('t'), 'inlineStr'));
           cell.children.add(inlineString);
           final updated = utf8.encode(doc.toXmlString());
           patchedArchive.addFile(
@@ -1423,12 +1419,12 @@ void main() {
       final patched = patchInlineString(
         excel.encode()!,
         'A1',
-        XmlElement(XmlName('is'), [], [
-          XmlElement(XmlName('r'), [], [
-            XmlElement(XmlName('t'), [], [XmlText('Hello')]),
+        XmlElement(XmlName.parts('is'), [], [
+          XmlElement(XmlName.parts('r'), [], [
+            XmlElement(XmlName.parts('t'), [], [XmlText('Hello')]),
           ]),
-          XmlElement(XmlName('r'), [], [
-            XmlElement(XmlName('t'), [], [XmlText(' inline')]),
+          XmlElement(XmlName.parts('r'), [], [
+            XmlElement(XmlName.parts('t'), [], [XmlText(' inline')]),
           ]),
         ]),
       );
@@ -1484,9 +1480,8 @@ void main() {
 
   group('Style preservation on round-trip', () {
     test('writing into one cell keeps an untouched cell style intact', () {
-      final bytes = File(
-        './test/test_resources/borders.xlsx',
-      ).readAsBytesSync();
+      final bytes = File('./test/test_resources/borders.xlsx')
+          .readAsBytesSync();
       final excel = Excel.decodeBytes(bytes);
       final sheet = excel.tables['Sheet1']!;
 
@@ -1517,9 +1512,8 @@ void main() {
     });
 
     test('overwriting a styled cell value preserves visual style', () {
-      final bytes = File(
-        './test/test_resources/borders.xlsx',
-      ).readAsBytesSync();
+      final bytes = File('./test/test_resources/borders.xlsx')
+          .readAsBytesSync();
       final excel = Excel.decodeBytes(bytes);
       final sheet = excel.tables['Sheet1']!;
       final target = sheet.cell(CellIndex.indexByString('A1'));

@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 /// Base class for Excel charts written into XLSX drawing parts.
 abstract class Chart {

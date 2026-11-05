@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import '../lib/excel.dart';
+import 'package:excel/excel.dart';
 
 void main(List<String> args) {
   var excel = Excel.createExcel();

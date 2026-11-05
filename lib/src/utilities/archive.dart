@@ -1,36 +1,27 @@
-part of excel;
+part of '../../excel.dart';
 
 Archive _cloneArchive(
   Archive archive,
-  Map<String, ArchiveFile> _archiveFiles, {
+  Map<String, ArchiveFile> replacements, {
   String? excludedFile,
 }) {
-  var clone = Archive();
-  archive.files.forEach((file) {
-    if (file.isFile) {
-      if (excludedFile != null &&
-          file.name.toLowerCase() == excludedFile.toLowerCase()) {
-        return;
-      }
-      ArchiveFile copy;
-      if (_archiveFiles.containsKey(file.name)) {
-        copy = _archiveFiles[file.name]!;
-      } else {
-        var content = file.content;
-        var compression = _noCompression.contains(file.name)
-            ? CompressionType.none
-            : CompressionType.deflate;
-        copy = ArchiveFile(file.name, content.length, content)
-          ..compression = compression;
-      }
-      clone.addFile(copy);
+  final clone = Archive()..comment = archive.comment;
+  final originalNames = <String>{};
+  bool excluded(String name) =>
+      excludedFile != null && name.toLowerCase() == excludedFile.toLowerCase();
+
+  for (final file in archive) {
+    originalNames.add(file.name);
+    if (!excluded(file.name)) {
+      // Retain the raw compressed content and ZIP metadata. The encoder does
+      // not close shared entries (autoClose defaults to false).
+      clone.addFile(replacements[file.name] ?? file);
     }
-  });
-  // Then add any new files from _archiveFiles that weren't in the original archive
-  _archiveFiles.forEach((name, file) {
-    if (!archive.files.any((f) => f.name == name)) {
-      clone.addFile(file);
+  }
+  for (final entry in replacements.entries) {
+    if (!originalNames.contains(entry.key) && !excluded(entry.key)) {
+      clone.addFile(entry.value);
     }
-  });
+  }
   return clone;
 }

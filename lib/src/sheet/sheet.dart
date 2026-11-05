@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class Sheet {
   final Excel _excel;
@@ -331,24 +331,12 @@ class Sheet {
   ///
   /// updates count of rows and columns
   ///
-  _countRowsAndColumns() {
-    int maximumColumnIndex = -1, maximumRowIndex = -1;
-    List<int> sortedKeys = _sheetData.keys.toList()..sort();
-    sortedKeys.forEach((rowKey) {
-      if (_sheetData[rowKey] != null && _sheetData[rowKey]!.isNotEmpty) {
-        List<int> keys = _sheetData[rowKey]!.keys.toList()..sort();
-        if (keys.isNotEmpty && keys.last > maximumColumnIndex) {
-          maximumColumnIndex = keys.last;
-        }
-      }
-    });
-
-    if (sortedKeys.isNotEmpty) {
-      maximumRowIndex = sortedKeys.last;
-    }
-
-    _maxColumns = maximumColumnIndex + 1;
-    _maxRows = maximumRowIndex + 1;
+  void _countRowsAndColumns() {
+    _maxColumns =
+        (_sheetData.values.map((row) => row.keys.maxOrNull ?? -1).maxOrNull ??
+            -1) +
+        1;
+    _maxRows = (_sheetData.keys.maxOrNull ?? -1) + 1;
   }
 
   void _markMergeChangedIf(bool changed) {

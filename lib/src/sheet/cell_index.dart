@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class CellIndex extends Equatable {
   CellIndex._({required this.columnIndex, required this.rowIndex});
@@ -38,5 +38,5 @@ class CellIndex extends Equatable {
   final int columnIndex;
 
   @override
-  List<Object?> get props => [rowIndex, columnIndex];
+  List<Object?> get props => [runtimeType, rowIndex, columnIndex];
 }

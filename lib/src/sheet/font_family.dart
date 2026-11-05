@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 enum FontFamily {
   Al_Bayan_Plain,

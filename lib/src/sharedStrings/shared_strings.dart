@@ -1,11 +1,4 @@
-part of excel;
-
-String _escapeXml(String input) {
-  return input
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;');
-}
+part of '../../excel.dart';
 
 class _SharedStringsMaintainer {
   final Map<SharedString, _IndexingHolder> _map =
@@ -83,10 +76,10 @@ class SharedString {
   SharedString._fromText(String text) : _node = null, _text = text;
 
   XmlElement get node {
-    return _node ??= XmlElement(XmlName('si'), [], [
+    return _node ??= XmlElement(XmlName.parts('si'), [], [
       XmlElement(
-        XmlName('t'),
-        [XmlAttribute(XmlName("space", "xml"), "preserve")],
+        XmlName.parts('t'),
+        [XmlAttribute(XmlName.parts("space", prefix: "xml"), "preserve")],
         [XmlText(_text!)],
       ),
     ]);
@@ -227,7 +220,7 @@ class SharedString {
 
   String toXmlString() {
     if (_node == null) {
-      return '<si><t xml:space="preserve">${_escapeXml(_text!)}</t></si>';
+      return '<si><t xml:space="preserve">${XmlText(_text!).toXmlString()}</t></si>';
     }
     return node.toString();
   }

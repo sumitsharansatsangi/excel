@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 // ignore: must_be_immutable
 class Data extends Equatable {
@@ -109,6 +109,7 @@ class Data extends Equatable {
   String? get comment => _comment;
   @override
   List<Object?> get props => [
+    runtimeType,
     _value,
     _columnIndex,
     _rowIndex,
@@ -523,7 +524,7 @@ class ImageCellValue extends CellValue {
       throw ArgumentError('Image bytes cannot be empty');
     }
 
-    final image = img.decodeImage(bytes);
+    final image = img.decodeImage(bytes, frame: 0);
     if (image == null) {
       throw ArgumentError('Unsupported or invalid image format');
     }

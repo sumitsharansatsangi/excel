@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class Border extends Equatable {
   final BorderStyle? borderStyle;
@@ -16,7 +16,7 @@ class Border extends Equatable {
   }
 
   @override
-  List<Object?> get props => [borderStyle, borderColorHex];
+  List<Object?> get props => [runtimeType, borderStyle, borderColorHex];
 }
 
 class _BorderSet extends Equatable {
@@ -60,6 +60,7 @@ class _BorderSet extends Equatable {
 
   @override
   List<Object?> get props => [
+    runtimeType,
     leftBorder,
     rightBorder,
     topBorder,

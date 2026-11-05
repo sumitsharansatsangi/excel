@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 Map<V, K> _createInverseMap<K, V>(Map<K, V> map) {
   final inverse = <V, K>{};

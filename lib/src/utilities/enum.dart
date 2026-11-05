@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 ///enum for `wrapping` up the text
 ///

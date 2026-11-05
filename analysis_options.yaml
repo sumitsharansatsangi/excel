@@ -1,0 +1,6 @@
+include: package:lints/core.yaml
+
+linter:
+  rules:
+    use_null_aware_elements: true
+    no_wildcard_variable_uses: true

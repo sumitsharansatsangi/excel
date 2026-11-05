@@ -1,4 +1,4 @@
-part of excel;
+part of '../excel.dart';
 
 Excel _newExcel(Archive archive) {
   // Lookup at file format
@@ -74,10 +74,16 @@ class Excel {
     return Excel.decodeBytes(Base64Decoder().convert(_newSheet));
   }
 
-  factory Excel.decodeBytes(List<int> data) {
+  /// Decodes an XLSX workbook. Set [verify] to check ZIP entry checksums as
+  /// their contents are read; malformed ZIP structure always throws.
+  factory Excel.decodeBytes(List<int> data, {bool verify = false}) {
     final Archive archive;
     try {
-      archive = ZipDecoder().decodeBytes(data);
+      archive = ZipDecoder().decodeBytes(
+        data,
+        verify: verify,
+        throwOnError: true,
+      );
     } catch (e) {
       throw UnsupportedError(
         'Excel format unsupported. Only .xlsx files are supported',
@@ -86,8 +92,11 @@ class Excel {
     return _newExcel(archive);
   }
 
-  factory Excel.decodeBuffer(InputStream input) {
-    return _newExcel(ZipDecoder().decodeStream(input));
+  /// Decodes an XLSX input stream, optionally verifying entry checksums.
+  factory Excel.decodeBuffer(InputStream input, {bool verify = false}) {
+    return _newExcel(
+      ZipDecoder().decodeStream(input, verify: verify, throwOnError: true),
+    );
   }
 
   factory Excel.fromJson(Map<String, dynamic> json) {
@@ -417,6 +426,13 @@ class Excel {
   List<int>? encode() {
     Save s = Save._(this, parser);
     return s._save();
+  }
+
+  /// Writes the XLSX archive directly to [output] without buffering the complete
+  /// ZIP in memory. Worksheet XML is still constructed in memory for editing.
+  /// The caller owns [output] and must close it when finished.
+  void encodeToStream(OutputStream output) {
+    Save._(this, parser)._saveToStream(output);
   }
 
   /// Starts Saving the file.

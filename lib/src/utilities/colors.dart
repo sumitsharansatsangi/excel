@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 String _decimalToHexadecimal(int decimalVal) {
   if (decimalVal == 0) {
@@ -1566,7 +1566,14 @@ class ExcelColor extends Equatable {
   static Map<String, ExcelColor> get valuesAsMap =>
       values.asMap().map((_, v) => MapEntry(v.colorHex, v));
   @override
-  List<Object?> get props => [_name, _color, _type, colorHex, colorInt];
+  List<Object?> get props => [
+    runtimeType,
+    _name,
+    _color,
+    _type,
+    colorHex,
+    colorInt,
+  ];
 }
 
 enum ColorType { color, material, materialAccent }

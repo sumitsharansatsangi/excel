@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class Parser {
   final Excel _excel;
@@ -49,7 +49,7 @@ class Parser {
     );
 
     for (final relations in relationsFiles) {
-      final fileName = basenameWithoutExtension(relations.name);
+      final fileName = p.posix.basenameWithoutExtension(relations.name);
 
       relations.decompress();
       var document = XmlDocument.parse(utf8.decode(relations.content));
@@ -58,7 +58,9 @@ class Parser {
       document.findAllElements('Relationship').forEach((node) {
         String? id = node.getAttribute('Id');
         String? target = node.getAttribute('Target');
-        final normalizedTarget = target?.replaceFirst('..', 'xl');
+        final normalizedTarget = target == null
+            ? null
+            : _resolveRelationshipTarget(relations.name, target);
         if (target != null) {
           switch (node.getAttribute('Type')) {
             case _relationshipsStyles:
@@ -108,13 +110,13 @@ class Parser {
             .first
             .children
             .add(
-              XmlElement(XmlName('Relationship'), <XmlAttribute>[
-                XmlAttribute(XmlName('Id'), 'rId$rIdNumber'),
+              XmlElement(XmlName.parts('Relationship'), <XmlAttribute>[
+                XmlAttribute(XmlName.parts('Id'), 'rId$rIdNumber'),
                 XmlAttribute(
-                  XmlName('Type'),
+                  XmlName.parts('Type'),
                   'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings',
                 ),
-                XmlAttribute(XmlName('Target'), 'sharedStrings.xml'),
+                XmlAttribute(XmlName.parts('Target'), 'sharedStrings.xml'),
               ]),
             );
         if (!_rId.contains('rId$rIdNumber')) {
@@ -138,9 +140,12 @@ class Parser {
               .first
               .children
               .add(
-                XmlElement(XmlName('Override'), <XmlAttribute>[
-                  XmlAttribute(XmlName('PartName'), '/xl/sharedStrings.xml'),
-                  XmlAttribute(XmlName('ContentType'), content),
+                XmlElement(XmlName.parts('Override'), <XmlAttribute>[
+                  XmlAttribute(
+                    XmlName.parts('PartName'),
+                    '/xl/sharedStrings.xml',
+                  ),
+                  XmlAttribute(XmlName.parts('ContentType'), content),
                 ]),
               );
         }
@@ -584,7 +589,7 @@ class Parser {
     return null; // pretending that the node's children is not having specified child.
   }
 
-  int _getFontIndex(node, String text) {
+  int _getFontIndex(XmlElement node, String text) {
     String? applyFont = node.getAttribute(text)?.trim();
     if (applyFont != null) {
       try {
@@ -603,7 +608,7 @@ class Parser {
       return const [];
     }
 
-    final targetFilename = basename(target);
+    final targetFilename = p.posix.basename(target);
     final targetRelations = _drawingTargets.relations(targetFilename);
     if (targetRelations == null) {
       return const [];
@@ -630,7 +635,9 @@ class Parser {
       final drawingContent = XmlDocument.parse(
         utf8.decode(drawingFile.content),
       );
-      final imageRelations = _imageTargets.relations(basename(drawingTarget));
+      final imageRelations = _imageTargets.relations(
+        p.posix.basename(drawingTarget),
+      );
       if (imageRelations == null) {
         continue;
       }
@@ -695,7 +702,10 @@ class Parser {
     }
     imageFile.decompress();
 
-    final format = extension(imageTarget).replaceFirst('.', '').toLowerCase();
+    final format = p.posix
+        .extension(imageTarget)
+        .replaceFirst('.', '')
+        .toLowerCase();
     if (!const {'png', 'jpg', 'jpeg', 'gif'}.contains(format)) {
       return null;
     }
@@ -959,10 +969,7 @@ class Parser {
     final sheetIndex = _excel._sheetMap.keys.toList().indexOf(sheetName) + 1;
     final commentsFileName = 'xl/comments$sheetIndex.xml';
 
-    return archive.files.firstWhere(
-      (file) => file.name == commentsFileName,
-      orElse: () => ArchiveFile('', 0, []), // Return an empty ArchiveFile
-    );
+    return archive.findFile(commentsFileName);
   }
 
   static String _parseValue(XmlElement node) {
@@ -1045,10 +1052,13 @@ class Parser {
         .first
         .children
         .add(
-          XmlElement(XmlName('Relationship'), <XmlAttribute>[
-            XmlAttribute(XmlName('Id'), 'rId$ridNumber'),
-            XmlAttribute(XmlName('Type'), '$_relationships/worksheet'),
-            XmlAttribute(XmlName('Target'), 'worksheets/sheet$sheetNumber.xml'),
+          XmlElement(XmlName.parts('Relationship'), <XmlAttribute>[
+            XmlAttribute(XmlName.parts('Id'), 'rId$ridNumber'),
+            XmlAttribute(XmlName.parts('Type'), '$_relationships/worksheet'),
+            XmlAttribute(
+              XmlName.parts('Target'),
+              'worksheets/sheet$sheetNumber.xml',
+            ),
           ]),
         );
 
@@ -1061,11 +1071,11 @@ class Parser {
         .first
         .children
         .add(
-          XmlElement(XmlName('sheet'), <XmlAttribute>[
-            XmlAttribute(XmlName('state'), 'visible'),
-            XmlAttribute(XmlName('name'), newSheet),
-            XmlAttribute(XmlName('sheetId'), '$sheetNumber'),
-            XmlAttribute(XmlName('r:id'), 'rId$ridNumber'),
+          XmlElement(XmlName.parts('sheet'), <XmlAttribute>[
+            XmlAttribute(XmlName.parts('state'), 'visible'),
+            XmlAttribute(XmlName.parts('name'), newSheet),
+            XmlAttribute(XmlName.parts('sheetId'), '$sheetNumber'),
+            XmlAttribute(XmlName.parts('r:id'), 'rId$ridNumber'),
           ]),
         );
 
@@ -1097,13 +1107,13 @@ class Parser {
         .first
         .children
         .add(
-          XmlElement(XmlName('Override'), <XmlAttribute>[
+          XmlElement(XmlName.parts('Override'), <XmlAttribute>[
             XmlAttribute(
-              XmlName('ContentType'),
+              XmlName.parts('ContentType'),
               'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml',
             ),
             XmlAttribute(
-              XmlName('PartName'),
+              XmlName.parts('PartName'),
               '/xl/worksheets/sheet$sheetNumber.xml',
             ),
           ]),

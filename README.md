@@ -530,3 +530,32 @@ File(join('$directory/output_file_name.xlsx'))
   ..createSync(recursive: true)
   ..writeAsBytesSync(fileBytes);
 ```
+
+### Stream output on native platforms
+
+Use `encodeToStream` to write ZIP output directly to a file without allocating
+one byte buffer for the complete XLSX. The editor still holds worksheet XML and
+cell data in memory. The caller owns and closes the output stream.
+
+```dart
+import 'package:archive/archive_io.dart';
+import 'package:excel/excel.dart';
+
+final excel = Excel.createExcel();
+final output = OutputFileStream('output.xlsx');
+try {
+  excel.encodeToStream(output);
+} finally {
+  output.closeSync();
+}
+```
+
+Checksum verification can be enabled when reading a workbook:
+
+```dart
+final excel = Excel.decodeBytes(bytes, verify: true);
+// Also supported by Excel.decodeBuffer(input, verify: true).
+```
+
+Verification checks entry checksums as their contents are read. ZIP structure
+errors are rejected regardless of this option.

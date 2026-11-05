@@ -1,9 +1,4 @@
-part of excel;
-
-final List<String> _noCompression = <String>[
-  'mimetype',
-  'Thumbnails/thumbnail.png',
-];
+part of '../../excel.dart';
 
 String getCellId(int columnIndex, int rowIndex) {
   return '${_numericToLetters(columnIndex + 1)}${rowIndex + 1}';
@@ -238,24 +233,24 @@ int _fontStyleIndex(List<_FontStyle> list, _FontStyle fontStyle) {
 enum ImageFormat { png, jpeg, gif, unknown }
 
 ImageFormat detectFormat(Uint8List bytes) {
-  if (bytes.length >= 8 &&
-      bytes[0] == 0x89 &&
-      bytes[1] == 0x50 &&
-      bytes[2] == 0x4E &&
-      bytes[3] == 0x47) {
-    return ImageFormat.png;
-  }
+  return switch (img.findFormatForData(bytes)) {
+    img.ImageFormat.png => ImageFormat.png,
+    img.ImageFormat.jpg => ImageFormat.jpeg,
+    img.ImageFormat.gif => ImageFormat.gif,
+    _ => ImageFormat.unknown,
+  };
+}
 
-  if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
-    return ImageFormat.jpeg;
-  }
-
-  if (bytes.length >= 6 &&
-      bytes[0] == 0x47 &&
-      bytes[1] == 0x49 &&
-      bytes[2] == 0x46) {
-    return ImageFormat.gif;
-  }
-
-  return ImageFormat.unknown;
+/// Resolve an OPC relationship target relative to the part owning the .rels.
+String _resolveRelationshipTarget(String relationshipsPath, String target) {
+  final sourcePart = relationshipsPath
+      .replaceFirst('/_rels/', '/')
+      .replaceFirst(RegExp(r'\.rels$'), '');
+  final targetPath = Uri.parse(target).path;
+  final resolved = p.posix.normalize(
+    targetPath.startsWith('/')
+        ? targetPath
+        : p.posix.join(p.posix.dirname(sourcePart), targetPath),
+  );
+  return resolved.startsWith('/') ? resolved.substring(1) : resolved;
 }

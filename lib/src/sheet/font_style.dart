@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 /// Styling class for cells
 // ignore: must_be_immutable
@@ -130,6 +130,7 @@ class _FontStyle extends Equatable {
 
   @override
   List<Object?> get props => [
+    runtimeType,
     _bold,
     _italic,
     _strikethrough,

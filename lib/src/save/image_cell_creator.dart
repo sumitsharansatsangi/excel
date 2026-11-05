@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class _ImageCellCreator {
   final Map<String, ArchiveFile> _archiveFiles;
@@ -61,28 +61,7 @@ class _ImageCellCreator {
       throw ArgumentError('Image bytes cannot be empty');
     }
 
-    final bytes = image.bytes;
-
-    bool isPng =
-        bytes.length >= 8 &&
-        bytes[0] == 0x89 &&
-        bytes[1] == 0x50 &&
-        bytes[2] == 0x4E &&
-        bytes[3] == 0x47;
-
-    bool isJpeg = bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8;
-
-    bool isGif =
-        bytes.length >= 6 &&
-        bytes[0] == 0x47 &&
-        bytes[1] == 0x49 &&
-        bytes[2] == 0x46;
-
-    if (!(isPng || isJpeg || isGif)) {
-      throw ArgumentError(
-        'Unsupported or invalid image format. Supported formats: PNG, JPEG, GIF',
-      );
-    }
+    _detectImageExtension(image.bytes);
   }
 
   ({XmlElement? existingDrawing, String drawingRId, int drawingNumber})
@@ -118,8 +97,8 @@ class _ImageCellCreator {
   }
 
   void _addWorksheetDrawingElement(XmlDocument worksheet, String drawingRId) {
-    final drawingElement = XmlElement(XmlName('drawing'), [
-      XmlAttribute(XmlName('r:id'), drawingRId),
+    final drawingElement = XmlElement(XmlName.parts('drawing'), [
+      XmlAttribute(XmlName.parts('r:id'), drawingRId),
     ]);
     final sheetData = worksheet.findAllElements('sheetData').firstOrNull;
     final worksheetElement = worksheet.rootElement;
@@ -312,13 +291,13 @@ class _ImageCellCreator {
   XmlDocument _createNewRelationshipsDoc() {
     return XmlDocument([
       XmlDeclaration([
-        XmlAttribute(XmlName('version'), '1.0'),
-        XmlAttribute(XmlName('encoding'), 'UTF-8'),
-        XmlAttribute(XmlName('standalone'), 'yes'),
+        XmlAttribute(XmlName.parts('version'), '1.0'),
+        XmlAttribute(XmlName.parts('encoding'), 'UTF-8'),
+        XmlAttribute(XmlName.parts('standalone'), 'yes'),
       ]),
-      XmlElement(XmlName('Relationships'), [
+      XmlElement(XmlName.parts('Relationships'), [
         XmlAttribute(
-          XmlName('xmlns'),
+          XmlName.parts('xmlns'),
           'http://schemas.openxmlformats.org/package/2006/relationships',
         ),
       ], []),
@@ -329,9 +308,9 @@ class _ImageCellCreator {
     var doc = XmlDocument.parse(content);
     if (!doc.rootElement.name.local.contains('Relationships')) {
       return XmlDocument([
-        XmlElement(XmlName('Relationships'), [
+        XmlElement(XmlName.parts('Relationships'), [
           XmlAttribute(
-            XmlName('xmlns'),
+            XmlName.parts('xmlns'),
             'http://schemas.openxmlformats.org/package/2006/relationships',
           ),
         ], doc.rootElement.children),
@@ -348,14 +327,14 @@ class _ImageCellCreator {
     if (relsRoot
         .findElements("Relationship")
         .none((element) => element.getAttribute("Id") == drawingRId)) {
-      var newRel = XmlElement(XmlName('Relationship'), [
-        XmlAttribute(XmlName('Id'), drawingRId),
+      var newRel = XmlElement(XmlName.parts('Relationship'), [
+        XmlAttribute(XmlName.parts('Id'), drawingRId),
         XmlAttribute(
-          XmlName('Type'),
+          XmlName.parts('Type'),
           'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing',
         ),
         XmlAttribute(
-          XmlName('Target'),
+          XmlName.parts('Target'),
           '../drawings/drawing$drawingNumber.xml',
         ),
       ]);
@@ -388,26 +367,14 @@ class _ImageCellCreator {
   }
 
   String _detectImageExtension(Uint8List bytes) {
-    if (bytes.length >= 8 &&
-        bytes[0] == 0x89 &&
-        bytes[1] == 0x50 &&
-        bytes[2] == 0x4E &&
-        bytes[3] == 0x47) {
-      return 'png';
-    }
-
-    if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
-      return 'jpg';
-    }
-
-    if (bytes.length >= 6 &&
-        bytes[0] == 0x47 &&
-        bytes[1] == 0x49 &&
-        bytes[2] == 0x46) {
-      return 'gif';
-    }
-
-    throw ArgumentError('Unsupported image format');
+    return switch (detectFormat(bytes)) {
+      ImageFormat.png => 'png',
+      ImageFormat.jpeg => 'jpg',
+      ImageFormat.gif => 'gif',
+      _ => throw ArgumentError(
+        'Unsupported or invalid image format. Supported formats: PNG, JPEG, GIF',
+      ),
+    };
   }
 
   String _updateExistingDrawingRels(
@@ -420,13 +387,13 @@ class _ImageCellCreator {
     final relationships = relsDoc.findAllElements('Relationships').first;
 
     relationships.children.add(
-      XmlElement(XmlName('Relationship'), [
-        XmlAttribute(XmlName('Id'), 'rId$rId'),
+      XmlElement(XmlName.parts('Relationship'), [
+        XmlAttribute(XmlName.parts('Id'), 'rId$rId'),
         XmlAttribute(
-          XmlName('Type'),
+          XmlName.parts('Type'),
           'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image',
         ),
-        XmlAttribute(XmlName('Target'), '../media/$imageFileName'),
+        XmlAttribute(XmlName.parts('Target'), '../media/$imageFileName'),
       ]),
     );
 
@@ -444,8 +411,8 @@ class _ImageCellCreator {
   }
 
   XmlElement _createCellElement(int columnIndex, int rowIndex) {
-    return XmlElement(XmlName('c'), [
-      XmlAttribute(XmlName('r'), getCellId(columnIndex, rowIndex)),
+    return XmlElement(XmlName.parts('c'), [
+      XmlAttribute(XmlName.parts('r'), getCellId(columnIndex, rowIndex)),
     ], []);
   }
 
@@ -456,9 +423,10 @@ class _ImageCellCreator {
     }
 
     final root = contentTypes.rootElement;
-    final imageExtension = extension(
-      imageFileName,
-    ).replaceFirst('.', '').toLowerCase();
+    final imageExtension = p.posix
+        .extension(imageFileName)
+        .replaceFirst('.', '')
+        .toLowerCase();
     final imageContentType = switch (imageExtension) {
       'png' => 'image/png',
       'jpg' || 'jpeg' => 'image/jpeg',
@@ -490,9 +458,9 @@ class _ImageCellCreator {
     }
 
     root.children.add(
-      XmlElement(XmlName('Default'), [
-        XmlAttribute(XmlName('Extension'), extension),
-        XmlAttribute(XmlName('ContentType'), contentType),
+      XmlElement(XmlName.parts('Default'), [
+        XmlAttribute(XmlName.parts('Extension'), extension),
+        XmlAttribute(XmlName.parts('ContentType'), contentType),
       ]),
     );
   }
@@ -510,9 +478,9 @@ class _ImageCellCreator {
     }
 
     root.children.add(
-      XmlElement(XmlName('Override'), [
-        XmlAttribute(XmlName('PartName'), partName),
-        XmlAttribute(XmlName('ContentType'), contentType),
+      XmlElement(XmlName.parts('Override'), [
+        XmlAttribute(XmlName.parts('PartName'), partName),
+        XmlAttribute(XmlName.parts('ContentType'), contentType),
       ]),
     );
   }
@@ -588,9 +556,7 @@ class _ImageCellCreator {
       return null;
     }
 
-    return target.startsWith('../')
-        ? 'xl/${target.substring(3)}'
-        : 'xl/worksheets/$target';
+    return _resolveRelationshipTarget(relsPath, target);
   }
 
   String? _readArchiveText(String path) {

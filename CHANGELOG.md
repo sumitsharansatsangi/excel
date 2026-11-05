@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [5.0.0]
+- Audit all direct dependency changelogs; record adopted APIs and applicability in `DEPENDENCY_AUDIT.md`.
+- Add optional checksum verification to workbook decoding and incremental ZIP compression for stream output.
+- Resolve image/drawing relationship paths with POSIX normalization across platforms.
+- Use image codec detection, avoid decoding every animation frame for image dimensions, and avoid copying typed browser output bytes.
+- Enable core lint checks and the new 6.1 rules, use linear scans for sheet bounds, and preserve type-specific model equality.
+- Preserve worksheet format extension attributes and namespace declarations during saves.
+- Preserve untouched ZIP entries and their compressed data during saves.
+- Add `encodeToStream` for writing XLSX output directly to archive streams.
+- Explicitly reject malformed ZIP structure with archive 4.6 decoder options.
+- Migrate XML names and builder namespaces to xml 7.1 APIs and use XML text serialization for escaping.
 - Update packages to latest versions
 - Migrate from `dart:html` to `package:web`
 - Set minimum dart sdk version to 3.6.0

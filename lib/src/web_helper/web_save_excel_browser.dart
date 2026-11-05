@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:js_interop';
+
 import 'package:web/web.dart' as web;
 
 class SavingHelper {
@@ -7,7 +8,7 @@ class SavingHelper {
     if (val == null) return null;
 
     // Dart bytes
-    final bytes = Uint8List.fromList(val);
+    final bytes = val is Uint8List ? val : Uint8List.fromList(val);
 
     // Uint8List → JSUint8Array (valid BlobPart)
     final jsBytes = bytes.toJS;
@@ -22,7 +23,7 @@ class SavingHelper {
 
     final url = web.URL.createObjectURL(blob);
 
-    final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+    final anchor = web.HTMLAnchorElement()
       ..href = url
       ..download = fileName
       ..style.display = 'none';

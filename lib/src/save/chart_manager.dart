@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class _ChartManager {
   final Excel _excel;
@@ -27,8 +27,8 @@ class _ChartManager {
       );
       drawingRelsBuilder.element(
         'Relationships',
-        namespaces: {
-          'http://schemas.openxmlformats.org/package/2006/relationships': '',
+        namespaceUris: {
+          '': 'http://schemas.openxmlformats.org/package/2006/relationships',
         },
         nest: () {
           for (var i = 0; i < sheet._charts.length; i++) {
@@ -46,8 +46,7 @@ class _ChartManager {
               'Relationship',
               attributes: {
                 'Id': 'rId${i + 1}',
-                'Type':
-                    'http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart',
+                'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart',
                 'Target': '../charts/chart$chartNumber.xml',
               },
             );
@@ -69,12 +68,12 @@ class _ChartManager {
 
   void _hydrateSeries(Chart chart) {
     for (final series in chart.series) {
-      series.categories ??= _resolveChartRange(
-        series.categoriesRange,
-      ).map((value) => value?.toString() ?? '').toList(growable: false);
-      series.values ??= _resolveChartRange(
-        series.valuesRange,
-      ).map(_toNumericChartValue).toList(growable: false);
+      series.categories ??= _resolveChartRange(series.categoriesRange)
+          .map((value) => value?.toString() ?? '')
+          .toList(growable: false);
+      series.values ??= _resolveChartRange(series.valuesRange)
+          .map(_toNumericChartValue)
+          .toList(growable: false);
     }
   }
 
@@ -113,7 +112,7 @@ class _ChartManager {
   }
 
   String _addSheetDrawingRelationship(String sheetPath, int drawingNumber) {
-    final relsPath = 'xl/worksheets/_rels/${basename(sheetPath)}.rels';
+    final relsPath = 'xl/worksheets/_rels/${p.posix.basename(sheetPath)}.rels';
     final relsDoc = _excel._xmlFiles.putIfAbsent(relsPath, () {
       final builder = XmlBuilder();
       builder.processing(
@@ -122,8 +121,8 @@ class _ChartManager {
       );
       builder.element(
         'Relationships',
-        namespaces: {
-          'http://schemas.openxmlformats.org/package/2006/relationships': '',
+        namespaceUris: {
+          '': 'http://schemas.openxmlformats.org/package/2006/relationships',
         },
       );
       return builder.buildDocument();
@@ -153,10 +152,10 @@ class _ChartManager {
     final nextRid = ids.isEmpty ? 1 : ids.reduce(max) + 1;
     final rId = 'rId$nextRid';
     root.children.add(
-      XmlElement(XmlName('Relationship'), [
-        XmlAttribute(XmlName('Id'), rId),
-        XmlAttribute(XmlName('Type'), _relationshipsDrawing),
-        XmlAttribute(XmlName('Target'), target),
+      XmlElement(XmlName.parts('Relationship'), [
+        XmlAttribute(XmlName.parts('Id'), rId),
+        XmlAttribute(XmlName.parts('Type'), _relationshipsDrawing),
+        XmlAttribute(XmlName.parts('Target'), target),
       ]),
     );
     return rId;
@@ -167,8 +166,8 @@ class _ChartManager {
     if (worksheet == null) return;
     if (worksheet.findElements('drawing').isNotEmpty) return;
 
-    final drawing = XmlElement(XmlName('drawing'), [
-      XmlAttribute(XmlName('id', 'r'), drawingRId),
+    final drawing = XmlElement(XmlName.parts('drawing'), [
+      XmlAttribute(XmlName.parts('id', prefix: 'r'), drawingRId),
     ]);
     final tagsAfterDrawing = {
       'legacyDrawing',
@@ -196,9 +195,9 @@ class _ChartManager {
         .any((element) => element.getAttribute('PartName') == partName);
     if (exists) return;
     root.children.add(
-      XmlElement(XmlName('Override'), [
-        XmlAttribute(XmlName('PartName'), partName),
-        XmlAttribute(XmlName('ContentType'), contentType),
+      XmlElement(XmlName.parts('Override'), [
+        XmlAttribute(XmlName.parts('PartName'), partName),
+        XmlAttribute(XmlName.parts('ContentType'), contentType),
       ]),
     );
   }

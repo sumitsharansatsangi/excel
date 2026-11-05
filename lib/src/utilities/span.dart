@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 // For Spanning the columns and rows
 class _Span extends Equatable {
@@ -22,6 +22,7 @@ class _Span extends Equatable {
 
   @override
   List<Object?> get props => [
+    runtimeType,
     rowSpanStart,
     columnSpanStart,
     rowSpanEnd,

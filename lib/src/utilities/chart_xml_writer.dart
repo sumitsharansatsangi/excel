@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class ChartXmlWriter {
   XmlDocument generateDrawingXml(List<Chart> charts) {
@@ -9,11 +9,10 @@ class ChartXmlWriter {
     );
     builder.element(
       'xdr:wsDr',
-      namespaces: {
-        'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing':
-            'xdr',
-        'http://schemas.openxmlformats.org/drawingml/2006/main': 'a',
-        _relationships: 'r',
+      namespaceUris: {
+        'xdr': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing',
+        'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+        'r': _relationships,
       },
       nest: () {
         for (var i = 0; i < charts.length; i++) {
@@ -32,10 +31,10 @@ class ChartXmlWriter {
     );
     builder.element(
       'c:chartSpace',
-      namespaces: {
-        'http://schemas.openxmlformats.org/drawingml/2006/chart': 'c',
-        'http://schemas.openxmlformats.org/drawingml/2006/main': 'a',
-        _relationships: 'r',
+      namespaceUris: {
+        'c': 'http://schemas.openxmlformats.org/drawingml/2006/chart',
+        'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+        'r': _relationships,
       },
       nest: () {
         builder.element(
@@ -110,16 +109,14 @@ class ChartXmlWriter {
                 builder.element(
                   'a:graphicData',
                   attributes: {
-                    'uri':
-                        'http://schemas.openxmlformats.org/drawingml/2006/chart',
+                    'uri': 'http://schemas.openxmlformats.org/drawingml/2006/chart',
                   },
                   nest: () {
                     builder.element(
                       'c:chart',
-                      namespaces: {
-                        'http://schemas.openxmlformats.org/drawingml/2006/chart':
-                            'c',
-                        _relationships: 'r',
+                      namespaceUris: {
+                        'c': 'http://schemas.openxmlformats.org/drawingml/2006/chart',
+                        'r': _relationships,
                       },
                       attributes: {'r:id': 'rId${index + 1}'},
                     );

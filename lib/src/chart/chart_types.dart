@@ -1,4 +1,4 @@
-part of excel;
+part of '../../excel.dart';
 
 class ColumnChart extends Chart {
   final bool isVertical;
