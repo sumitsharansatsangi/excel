@@ -569,7 +569,7 @@ class Parser {
     }
   }
 
-  dynamic _nodeChildren(XmlElement node, String child, {var attribute}) {
+  dynamic _nodeChildren(XmlElement node, String child, {attribute}) {
     Iterable<XmlElement> ele = node.findElements(child);
     if (ele.isNotEmpty) {
       if (attribute != null) {
@@ -584,7 +584,7 @@ class Parser {
     return null; // pretending that the node's children is not having specified child.
   }
 
-  int _getFontIndex(var node, String text) {
+  int _getFontIndex(node, String text) {
     String? applyFont = node.getAttribute(text)?.trim();
     if (applyFont != null) {
       try {
